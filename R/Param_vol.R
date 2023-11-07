@@ -1,0 +1,138 @@
+################################################################
+#   ISABELLE AUGER                                             #
+#                                                              #
+#   isabelle.augere@mrnf.gouv.qc.ca                            #
+#    last udate       July 2023                                #
+#                                                              #
+#                                                              #
+#   Function generating parameter values of tree volume model  #
+#                                                              #
+#   Use                                                        #
+
+#   tarif_param_fixe.rda                                       #
+#   tarif_param_cov.rda                                        #
+#   tarif_param_random.rda                                     #
+#                                                              #
+################################################################
+
+#' Generating parameters of the merchantable tree volume model from Fortin et al. (2007)
+#'
+#' @description Generate parameters of the merchantable tree volume model of Fortin et al. (2007), deterministic or stochastic, for each tree of each plot and for all iterations
+#'
+#' @details
+#' The model for estimating merchantable tree volume is a linear mixed model with species as a covariate (Fortin et al. 2007).
+#' There is a random plot effect and a viree random effect, but only the plot random effect is generated.
+#' The residual errors are not correlated. There is a covariance matrix of fixed effects.
+#'
+#' Fortin, M., J. DeBlois, S. Bernier et G. Blais, 2007. Mise au point d’un tarif de cubage général pour
+#' les forêts québécoises : une approche pour mieux évaluer l’incertitude associée aux prévisions.
+#' For. Chron. 83: 754-765.
+#'
+#' @param fic_arbres Dataframe with a list of trees for which volume must be estimated, at least tree ID (no_arbre) and plot Id (id_pe) must be present
+#' @param mode_simul Simulation mode (STO = stochastic, DET = deterministic), default "DET"
+#' @param nb_iter Number of iterations if stochastic mode (default 1), ignored if \code{mode_simul="DET"}
+#' @param seed_value Optionnal parameter to set the seed value for random number generation. Usually used for testing for reproductibility
+#'
+#' @return  A list of lists, one list per iteration, and for each iteration, a list with 3 elements:
+#' \enumerate{
+#'   \item effet_fixe : dataframe of fixed effect parameter values (one line per species for which there is a volume model)
+#'   \item random_placette: dataframe of random plot effect values (one line per plot)
+#'   \item erreur_residuelle : dataframe of residual error values (one line per tree)
+#' }
+#' @export
+#'
+#' @examples
+#' # Mode déterministe
+#' parametre_vol <- param_vol(fic_arbres=fic_arbres_test)
+#'
+#' # Mode stochastique, 10 itérations
+#' parametre_vol <- param_vol(fic_arbres=fic_arbres_test, mode_simul='STO', nb_iter=10)
+#'
+param_vol <- function(fic_arbres, mode_simul="DET", nb_iter=1, seed_value=NULL){
+
+  #fic_arbres=fic_arbres; nb_iter=10; mode_simul='STO';
+
+  if (length(seed_value)>0) {set.seed(seed_value)}
+
+  # liste des arbres
+  liste_arbre <- fic_arbres %>% dplyr::select(id_pe, no_arbre) %>% unique()
+
+  # générer la liste de placettes
+  liste_place <- unique(liste_arbre$id_pe)
+
+  # lecture des paramètres des effets fixes (tarif_param_fixe.rda)
+  param_tarif <- tarif_param_fixe
+
+  if (mode_simul=='STO') {
+    # Transposition des paramètres pour avoir une seule ligne
+    param_tarif_tr <- param_tarif %>% pivot_wider(names_from = beta_ess, values_from = Estimate)
+
+    # générer les effets fixes avec la matrice de covariances des effets fixes (tarif_param_cov.rda)
+    param_vol = as.data.frame(matrix(mvrnorm(n = nb_iter, mu = as.matrix(param_tarif_tr), Sigma = as.matrix(tarif_param_cov)),
+                                     nrow=nb_iter))
+    names(param_vol) <- names(param_tarif_tr)
+    param_vol <- param_vol %>% mutate(iter = row_number())
+
+    # il faut retransposer pour utiliser les paramètres dans la fonction de cubage
+    param_vol_tr <- param_vol %>%
+      group_by(iter) %>%
+      pivot_longer(cols=b1:b3_TIL, names_to = "parameter", values_to = "estimate") %>%
+      separate_wider_delim(col=parameter, names=c("parm","essence_volume"), delim='_', too_few = "align_start") %>%
+      filter(!is.na(essence_volume)) %>%
+      group_by(iter, essence_volume) %>%
+      pivot_wider(names_from = parm, values_from = estimate) %>%
+      left_join(param_vol[,c('iter','b1')], by='iter') %>%
+      ungroup()
+
+    # fichier des effets aléatoires et erreur résiduelle
+    # les 6 premières lignes sont les éléments de la matrice des effets aléatoires de virée et de placette (UN)
+    # on va utiliser seulement celui de placette, donc la ligne 1 (UN(1,1)    j(i))
+    # les lignes 7 à 32 sont la variance de l'erreur résiduelle pour chaque essence
+    # tarif_param_random.rda
+
+    # liste des placettes x nb_iter pour accueillir les effets aléatoires de placette
+    data_plot <- expand_grid(iter = 1:nb_iter, id_pe = liste_place)
+    # liste des arbres x nb_iter pour accueillir les erreurs résiduelles
+    data_arbre <- as.data.frame(unclass(expand_grid(iter = 1:nb_iter, id_pe = liste_arbre)))
+    names(data_arbre) <- c('iter', 'id_pe', 'no_arbre')
+
+    # générer un effet aléatoire de placette pour chaque placette/iter
+    random_plot = data.frame('random_plot'=rnorm(nb_iter*length(liste_place), mean=0, sd = sqrt(as.matrix(tarif_param_random[1,4]))))
+    random_plot = bind_cols(data_plot,random_plot)
+
+    #générer les erreurs résiduelles qui sont fonction de l'essence pour chaque arbre
+    sigma2_ess <- tarif_param_random[7:32,c(3,4)] %>% mutate(ess = substr(Group,9,11)) %>% dplyr::select(ess, -Group, Estimate)
+
+    liste_ess <- sigma2_ess$ess
+    res_tous <- NULL
+    for (ess in liste_ess){
+      res = as.data.frame(rnorm(nb_iter*length(liste_arbre$no_arbre), mean=0, sd = sqrt(as.matrix(sigma2_ess[sigma2_ess$ess==ess,2]))))
+      names(res) <- ess
+      res_tous <- bind_cols(res_tous, res)
+    }
+    res_tous <- bind_cols(data_arbre,res_tous)
+    # l'erreur résiduelle à choisir est celle de la colonne correspondant à l'essence de l'arbre
+
+    list_result <- list()
+    for (i in 1:nb_iter) {
+      list_result[[i]] <- list('effet_fixe'=param_vol_tr[param_vol_tr$iter==i,], 'random_placette'=random_plot[random_plot$iter==i,], 'erreur_residuelle'=res_tous[res_tous$iter==i,])
+    }
+  }
+  else{ # si déterministe
+    param_vol_tr <- param_tarif %>%
+      separate_wider_delim(col=beta_ess, names=c("parm","essence_volume"), delim='_', too_few = "align_start") %>%
+      filter(!is.na(essence_volume)) %>%
+      group_by(essence_volume) %>%
+      pivot_wider(names_from = parm, values_from = Estimate) %>%
+      mutate(b1 = param_tarif[param_tarif$beta_ess=='b1',2], iter=1) %>%
+      ungroup()
+
+    random_plot <- 0
+    res_tous <- 0
+
+    list_result <- list()
+    list_result[[1]] <- list('effet_fixe'=param_vol_tr, 'random_placette'=random_plot, 'erreur_residuelle'=res_tous)
+  }
+  #return(list('effet_fixe'=param_vol_tr, 'random_placette'=random_plot, 'erreur_residuelle'=res_tous))
+  return(list_result)
+}

@@ -1,0 +1,18 @@
+
+
+test_that("param_ht_stoch() avec mode déterministe retourne les bons paramètres", {
+  data_arbre <- readRDS(test_path("fixtures", "data_arbre.rds"))
+  parametre_ht_dhp_attendu <- readRDS(test_path("fixtures", "parametre_ht_dhp_attendu.rds"))
+  parametre_ht_dhp <- param_ht_stoch(fic_arbres=data_arbre, mode_simul='DET')
+  expect_equal(parametre_ht_dhp, parametre_ht_dhp_attendu)
+})
+
+test_that("param_ht_stoch() avec mode stochastique avec seed=20 retourne les bons paramètres", {
+  data_arbre <- readRDS(test_path("fixtures", "data_arbre.rds"))
+  parametre_ht_dhp_attendu_sto <- readRDS(test_path("fixtures", "parametre_ht_dhp_attendu_sto.rds"))
+  parametre_ht_dhp_sto <- param_ht_stoch(fic_arbres=data_arbre, mode_simul='STO', nb_iter = 1, seed_value = 20)
+  expect_equal(parametre_ht_dhp_sto, parametre_ht_dhp_attendu_sto)
+})
+
+
+# je n'ai pas testé avec plusieurs mesures par arbre dans le temps

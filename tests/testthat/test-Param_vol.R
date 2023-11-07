@@ -1,0 +1,15 @@
+
+test_that("param_vol() avec mode déterministe retourne les bons paramètres", {
+  data_arbre <- readRDS(test_path("fixtures", "data_arbre_vol.rds"))
+  parametre_vol_attendu <- readRDS(test_path("fixtures", "param_vol_attendu.rds"))
+  parametre_vol <- param_vol(fic_arbres=data_arbre, mode_simul='DET')
+  expect_equal(parametre_vol, parametre_vol_attendu)
+})
+
+test_that("param_vol() avec mode stochastique avec seed=20 retourne les bons paramètres", {
+  data_arbre <- readRDS(test_path("fixtures", "data_arbre_vol.rds"))
+  parametre_vol_attendu_sto <- readRDS(test_path("fixtures", "param_vol_attendu_sto.rds"))
+  parametre_vol_sto <- param_vol(fic_arbres=data_arbre, mode_simul='STO', nb_iter = 1, seed_value = 20)
+  expect_equal(parametre_vol_sto, parametre_vol_attendu_sto)
+})
+

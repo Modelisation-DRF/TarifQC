@@ -1,0 +1,1002 @@
+---
+ output:
+   pdf_document:
+     number_sections: yes
+     fig_width: 5
+     fig_height: 4
+     fig_caption: yes
+   includes: null
+   in_header: preamble.tex
+   word_document: default
+ keep_tex: yes
+ header-includes:
+ - \usepackage[french]{babel}
+ - \numberwithin{figure}{section}
+ toc_float: yes
+ geometry: margin=2cm
+---
+
+
+\begin{center}
+
+\vspace*{10ex}
+
+{\scshape\LARGE Modélisation de la carie à l’échelle de la tige}
+\vfill
+\scshape\LARGE Analyses statistiques et rapport faits par Geneviève Picher
+\vfill
+Direction des inventaires forestiers
+\vfill
+Ministère des Forêts, de la Faune et des Parcs
+\vfill
+
+% Date
+{\large \today\par}
+
+\end {center}
+
+
+\newpage
+\tableofcontents
+\newpage
+
+<style>
+.math {
+  font-size: small;
+}
+</style>
+
+
+# Description des données
+
+La carie est une maladie de l'arbre répandue dans les forêts québécoises. Elle se définit par un processus de dégradation de la fibre du bois, principalement causés par des champignons. Cela entraîne l'altération des propriétés physico-chimiques des fibres ligneuses et subséquemment une perte de résistance mécanique. En plus de provoquer une réduction de la qualité et de la valeur des bois, elle affecte le rendement en volume. Par conséquent, la carie a une incidence économique importante sur le secteur forestier du Québec. 
+\newline
+\newline
+Ce projet vise à développer des modèles de prévision du taux de carie à l'échelle de l'arbre et du peuplement pour l'épinette blanche (EPB), l'épinette noire (EPN), le pin gris (PIG) et le sapin baumier (SAB) issus des forêts mélangées et boréales du territoire forestier de la province provenant des régions 02, 03, 08, 09 et 10. Ces modèles permettront de mieux caractériser la quantité et la qualité de la ressource en vue d'un aménagement forestier durable des forêts. Deux variables dépendantes sont modélisées : la présence de carie et le taux de carie des tiges cariées. La présence de carie est une variable dichotomique qui prend les valeurs 0 et 1. Le taux de carie, quant à lui, est une variable continue bornée entre ]0,1]. Le tableau 1.1 présente une description de l'échantillon; 41.5% des tiges de sapin baumier sont cariées. Seules les tiges vivantes ont été utilisées pour calibrer les modèles.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(sas7bdat)
+library(openxlsx)
+library(tinytex)
+library(ggplot2)
+library(ggpubr)
+library(knitr)
+library(dplyr)
+library(kableExtra)
+
+donnees <- read.sas7bdat("bd_sas.sas7bdat")
+names(donnees) <- tolower(names(donnees))
+
+tab1_ntot <- donnees %>%
+         group_by(essence) %>%
+        summarise(n=n())
+
+tab1_ncarie <- donnees %>%
+                filter(carie_dicho==1) %>%
+         group_by(essence) %>%
+        summarise(n=n())
+
+tab1_npe <- donnees %>%
+              group_by(essence) %>%
+              summarise(n = n_distinct(id_placet))
+
+tab1 <- inner_join(tab1_ntot, tab1_ncarie, by="essence") %>%
+           mutate(prop = round((n.y/n.x)*100, digits=2))
+
+tab1_1 <- inner_join(tab1, tab1_npe)
+
+kable(tab1_1,longtable=F, booktabs=T, linesep="",
+      col.names = c("Essence","Nombre de tiges","Nombre de tiges cariées","Proportion de tiges cariées (%)","Nombre de placettes"), caption = "Description de l'échantillon") %>%
+   kable_styling(latex_options=c("HOLD_position")) %>%
+  column_spec(1:2, width = "5em") %>%
+  column_spec(3:5, width = "8em") 
+
+```
+
+```{r echo=FALSE, warning=FALSE, message=FALSE, fig.align="center"}
+epb_carie <- donnees %>% filter(essence=="EPB" & carie_dicho==1) %>%
+ggplot() +
+  geom_histogram(aes(x=taux_carie, y=(..count../sum(..count..))*100),
+                     fill="#172e63",color="#e9ecef", alpha=0.9, binwidth = 0.03) +
+  labs(x="taux de carie", y="%", title="EPB (N=173)") +
+  theme(text=element_text(family="serif", size=9),
+        plot.title=element_text(size=10))
+
+epn_carie <- donnees %>% filter(essence=="EPN" & carie_dicho==1) %>%
+ggplot() +
+  geom_histogram(aes(x=taux_carie, y=(..count../sum(..count..))*100),
+                     fill="#172e63",color="#e9ecef", alpha=0.9, binwidth = 0.025) +
+  labs(x="taux de carie", y="%", title="EPN (N=387)") +
+  theme(text=element_text(family="serif", size=9),
+        plot.title=element_text(size=10))
+
+pig_carie <- donnees %>% filter(essence=="PIG" & carie_dicho==1) %>%
+ggplot() +
+  geom_histogram(aes(x=taux_carie, y=(..count../sum(..count..))*100),
+                     fill="#172e63",color="#e9ecef", alpha=0.9, binwidth = 0.0175) +
+  labs(x="taux de carie", y="%", title="PIG (N=68)") +
+  theme(text=element_text(family="serif", size=9),
+        plot.title=element_text(size=10))
+
+sab_carie <- donnees %>% filter(essence=="SAB" & carie_dicho==1) %>%
+ggplot() +
+  geom_histogram(aes(x=taux_carie, y=(..count../sum(..count..))*100),
+                     fill="#172e63",color="#e9ecef", alpha=0.9, binwidth = 0.035) +
+  labs(x="taux de carie", y="%", title="SAB (N=1049)") +
+  theme(text=element_text(family="serif", size=9),
+        plot.title=element_text(size=10))
+
+ggarrange(epb_carie, epn_carie, pig_carie, sab_carie, nrow=2, ncol=2)
+
+```
+
+\begin{center} Figure \addtocounter{figure}{1}\thefigure: Distribution du taux de carie des tiges cariées, par essence \end{center}
+
+\vspace{1em}
+\newpage
+La figure 1.1, illustrée à la page précédente, présente la distribution du taux de carie des tiges cariées pour chacune des essences. La forme de la distribution ressemble à une distribution Gamma et les taux de carie observés varient entre 0.0003 et 0.67, toutes essences confondues.
+
+# Modèles
+
+## Probabilité de carie
+
+La procédure GLIMMIX de SAS 9.4 est utilisée pour estimer la probabilité qu'une tige soit affectée par la carie. Un modèle logistique mixte avec une distribution binomiale est étalonné et un effet aléatoire de placette est testé pour chacune des essences. La méthode de sélection ascendante (*forward*) est utilisée pour la sélection des variables explicatives et est basée sur le critère d'information d'Akaike (AIC). Le processus de sélection est arrêté lorsque l'ajout d'une variable entraîne une diminution du AIC inférieure à 10. Les interactions entre les variables sélectionnées sont aussi testés par la suite. Voici le modèle général utilisé :
+
+$$PCarie_{ij} = \frac{1}{(1+e^{\mathrm{X}_{ij}\mathrm{B}+\gamma_{i}+ \varepsilon_{ij}})}  $$ 
+\newline
+\newline
+où :
+
+$PCarie_{ij}$ = probabilité de carie de la tige $j$ de la placette $i$
+
+$\mathrm{X}_{ij}$ = matrice de variables explicatives associées à la tige $j$ de la placette $i$
+
+$\mathrm{B}$ = vecteur des paramètres
+
+$\gamma_{i}$ = effet aléatoire associé à la placette $i$
+
+$\varepsilon_{ij}$ = erreur aléatoire correspondant à la tige $j$ de la placette $i$
+\newline
+\newline
+L'aire sous la courbe ROC est utilisée comme mesure de performance de la variable dichotomique. Une valeur de 0.5 signifie que le modèle n'est pas meilleur qu'un modèle qui prédit des résultats aléatoires. Plus grande est la valeur, meilleur est le modèle à prédire les 0 comme des 0 et les 1 comme des 1. 
+
+## Taux de carie des tiges cariées 
+
+La procédure GLIMMIX est utilisée pour estimer le taux de carie des tiges carieés, qui est défini par la proportion de volume marchand de carie des tiges cariées. Plusieurs types de modèles sont considérés (beta, fractional logit, etc.). Un modèle linéaire mixte avec une transformation logarithmique est retenu pour chacune des essences et un effet aléatoire de placette est testé. La méthode de sélection ascendante (*forward*) est utilisée pour la sélection des variables explicatives et est basée sur le critère d'information d'Akaike (AIC). Le processus de sélection est arrêté lorsque l'ajout d'une variable entraîne une diminution du AIC inférieure à 10. Les interactions entre les variables sélectionnées sont aussi testés par la suite. Voici le modèle général utilisé :
+
+$$log(TauxCarie_{tige\ cariée_{ij}}) = \mathrm{X}_{ij}\mathrm{B} + \gamma_{i} + \varepsilon_{ij}  $$ 
+\newline
+\newline
+où :
+
+$log(TauxCarie_{tige\ cariée_{ij}})$ = logarithme népérien du taux de carie de la tige $j$ de la placette $i$
+
+$\mathrm{X}_{ij}$ = matrice de variables explicatives associées à la tige $j$ de la placette $i$
+
+$\mathrm{B}$ = vecteur des paramètres
+
+$\gamma_{i}$ = effet aléatoire associé à la placette $i$
+
+$\varepsilon_{ij}$ : erreur aléatoire correspondant à la tige $j$ de la placette $i$
+\newline
+\newline
+Les hypothèses d'homogénéité de la variance et de normalité des résidus sont vérifiées de manière graphique. 
+\newline
+\newline
+Une transformation inverse doit être appliquée pour obtenir les prédictions dans les bonnes unités. Par ailleurs, il est nécessaire d'appliquer un facteur de correction pour obtenir des prédictions non biaisées sur l'échelle originale :
+
+$$ TauxCarie_{tige\ cariée_{ij}} = e^{log(TauxCarie_{tige\ cariée_{ij}}) \times s^2/2} $$
+
+où
+
+$s^2$ = $s^2_{placette} + s^2_{résiduelle}$
+
+
+## Taux de carie global
+
+Le taux de carie global représente le taux de carie pour l'ensemble des tiges, cariées ou non, par essence. Il est calculé en multipliant les prédictions obtenues par les modèles de probabilité de carie et de taux de carie (et en appliquant la transformation inverse et le facteur de correction *a priori*). 
+
+$$ TauxCarie_{tige_{ij}} = Pcarie_{ij} \times TauxCarie_{tige\ cariée_{ij}}  $$
+
+
+# Validation des modèles
+
+Une évaluation des modèles est effectuée afin de vérifier leur fiabilité et leur justesse. La méthode de la validation croisée en $n$ groupes est utilisée. Cette méthode consiste à retirer une placette de la banque de données puis à étalonner le modèle avec les ($n$ - 1) placettes restantes et ainsi obtenir un nouvel ensemble de paramètres. La valeur estimée est ensuite calculée avec ces nouveaux paramètres pour la placette qui a été enlevée. Ces étapes sont répétées pour les $n$ placettes de l'ensemble de données. Le biais et la racine carrée de l'erreur quadratique moyenne (*erreur*) de chacun des modèles sont ensuite calculés comme suit :
+
+
+$$ Biais =\frac{\sum\limits_{i=1}^{n}\sum\limits_{j=1}^{m_{i}} (y_{ij}-\hat{y}_{ij(i)})}{\sum\limits_{i=1}^{n} m_{i}}$$
+
+
+$$ Erreur = \sqrt\frac{\sum\limits_{i=1}^{n}\sum\limits_{j=1}^{m_{i}} (y_{ij}-\hat{y}_{ij(i)})^2}{\sum\limits_{i=1}^{n} m_{i}} $$
+
+où :
+
+$y_{ij}$ = Valeur observée pour la tige $j$ de la placette $i$
+
+$\hat{y}_{ij(i)}$ = Valeur prédite pour la tige $j$ de la placette $i$ quand les paramètres du modèle sont calculés sans utiliser les données de la placette $i$
+
+$n$ = Nombre de placettes
+
+$m_{i}$ = Nombre de tiges pour la placette $i$
+\newline
+\newline
+Si le biais est positif, le modèle sous-estimera les observations alors que si le biais est négatif, il aura tendance à surestimer les données observées. Des valeurs relatives du biais et de l'erreur sont aussi calculés en les divisant par la moyenne des valeurs observées. 
+
+
+# Résultats
+
+\numberwithin{table}{subsection}
+
+## Épinette blanche
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+epb_pred_cdicho <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/EPB/pred_cdicho.xlsx") %>%
+     mutate(MSCR=factor(MSCR, levels=c("M","S","C","R")))%>%
+     filter(!is.na(age_EPB))
+
+names(epb_pred_cdicho) <- tolower(names(epb_pred_cdicho))
+
+#données simulées par le modèle en spécifiant une valeur moyenne d'âge et de hauteur
+epb_pred_cdicho_dhp <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/EPB/epb_simul_cdicho.xlsx") %>%
+     mutate(MSCR=factor(MSCR, levels=c("M","S","C","R")))%>%
+     filter(!is.na(age_EPB))
+
+names(epb_pred_cdicho_dhp) <- tolower(names(epb_pred_cdicho_dhp))
+
+epb_pred_tcarie <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/EPB/pred_tcarie.xlsx") %>%
+     mutate(MSCR=factor(MSCR, levels=c("M","S","C","R")))
+
+names(epb_pred_tcarie) <- tolower(names(epb_pred_tcarie))
+```
+
+### Probabilité de carie
+
+Les variables retenues ici sont la priorité de récolte, le dhp et l'âge moyen de l'EPB.
+
+$$ p=\frac{1}{1+e^{-(\beta_{0,P} + \beta_1dhp + \beta_2age)}} $$
+
+où :
+
+
+$dhp$ = dhp en *mm*  
+$age$ = âge moyen de l'épinette blanche issu des arbres études         
+\newline
+\newline
+Le paramètre $\beta_{0,P}$ est  associé à l'ordonnée à l'origine. La lettre *P* prend les valeurs *M* (Mourir), *S* (Survie), *C* (Conserver) et *R* (Réserve) selon le niveau de priorité de récolte. La table 4.1.1 présente les estimés des paramètres du modèle.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+epb_estimate_cdicho <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/EPB/estimate_cdicho.xlsx") %>%
+     filter(Effect %in% c("DHP_MM","age_EPB","HT_M")) %>%
+     mutate(Effect=ifelse(Effect=="DHP_MM", "$\\beta_1$",
+                    ifelse(Effect=="age_EPB","$\\beta_2$",NA)),
+       Estimate=round(Estimate,4),
+            StdErr=round(StdErr,4)) %>%
+     select(c(Effect, Estimate, StdErr))
+
+names(epb_estimate_cdicho) <- tolower(names(epb_estimate_cdicho))
+
+
+epb_estimate_intercept_cdicho <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/EPB/estimate_intercept_cdicho.xlsx") %>%
+  arrange(match(Label, c("m","s","c","r"))) %>%
+     mutate(effect=ifelse(Label=="m","$\\beta_{0,M}$",
+                    ifelse(Label=="s","$\\beta_{0,S}$",
+                      ifelse(Label=="c","$\\beta_{0,C}$",
+                        ifelse(Label=="r","$\\beta_{0,R}$",NA)))),
+            Estimate=round(Estimate,4),
+            StdErr=round(StdErr,4)) %>%
+     select(c(effect, Estimate, StdErr))
+
+names(epb_estimate_intercept_cdicho) <- tolower(names(epb_estimate_intercept_cdicho))
+
+param <- rbind(epb_estimate_intercept_cdicho, epb_estimate_cdicho)
+
+colnames(param) <- c("Paramètre","Estimé","Erreur-type")
+kable(param, longtable=F, booktabs=T, escape=F, linesep="", caption="Estimés des paramètres et erreurs-types") %>%
+  kable_styling(latex_options=c("HOLD_position"), protect_latex = FALSE)
+```
+
+La figure 4.1, illustrée à la page suivante, présente les modèles de probabilité de carie (et intervalles de confiance) selon le niveau de priorité de récolte en fonction du dhp, pour une valeur moyenne d'âge moyen d'épinette blanche. Plus le dhp est grand, plus la probabilité de carie sera élevée. Les tiges associées à une priorité de récolte *M* ont une probabilité de carie plus élevée. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align="center"}
+epb_cdicho_n_mscr <- as.matrix(epb_pred_cdicho %>%
+               group_by(mscr) %>%
+              summarise(n=n()) )
+
+ggplot()+
+geom_line(data=epb_pred_cdicho_dhp, aes(y=pred_carie_dicho, x=dhp_mm, color=mscr)) +
+geom_ribbon(data=epb_pred_cdicho_dhp, aes(ymin=lower, ymax=upper, x=dhp_mm, fill=mscr), alpha=0.2, color=NA)+
+  scale_color_manual(values=c("#172e63","#e97610","#59b07c","#5976b0"), 
+                  labels=c(paste0("M (n=",epb_cdicho_n_mscr[1,2],")"),paste0("S (n=",epb_cdicho_n_mscr[2,2],")"),
+                            paste0("C (n=",epb_cdicho_n_mscr[3,2],")"),paste0("R (n=",epb_cdicho_n_mscr[4,2],")")))+
+scale_fill_manual(values=c("#172e63","#e97610","#59b07c","#5976b0"), 
+                  labels=c(paste0("M (n=",epb_cdicho_n_mscr[1,2],")"),paste0("S (n=",epb_cdicho_n_mscr[2,2],")"),
+                            paste0("C (n=",epb_cdicho_n_mscr[3,2],")"),paste0("R (n=",epb_cdicho_n_mscr[4,2],")")))+
+labs(x="dhp (mm)",y="probabilité de carie", col="priorité de\nrécolte", fill="priorité de\nrécolte")+
+theme(text=element_text(family="serif", size=9),
+        plot.title = element_text(size = 9),
+        legend.title = element_text(size = 9),
+        legend.justification = c(1,0.7),legend.position = c(0.98,0.3))
+
+epb_cdicho_ntotal <- epb_pred_cdicho %>%
+        summarise(n())
+```
+
+
+\begin{center} Figure \addtocounter{figure}{1}\thefigure: Modèles de probabilité de carie selon le niveau de priorité de récolte en fonction du dhp, pour une valeur moyenne d'âge moyen de l'EPB (N = `r epb_cdicho_ntotal`) \end{center}
+
+\vspace{1em}
+
+
+### Taux de carie des tiges cariées
+
+Les variables retenues ici sont la priorité de récolte et la hauteur totale.
+
+$$ log(taux carie) = \beta_{0,P} + \beta_1ht  $$
+
+où :
+
+$ht$ = hauteur totale en *m*
+\newline
+\newline
+Le paramètre $\beta_{0,P}$ est  associé à l'ordonnée à l'origine. La lettre *P* prend les valeurs *M*, *S*, *C* et *R* selon le niveau de priorité de récolte. La table 4.1.2 présente les paramètres du modèle.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+epb_estimate_tcarie <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/EPB/estimate_tcarie.xlsx") %>%
+     filter(Effect=="HT_M") %>%
+     mutate(Effect=ifelse(Effect=="HT_M", "$\\beta_1$",NA),
+       Estimate=round(Estimate,4),
+            StdErr=round(StdErr,4)) %>%
+     select(c(Effect, Estimate, StdErr))
+
+names(epb_estimate_tcarie) <- tolower(names(epb_estimate_tcarie))
+
+epb_estimate_intercept_tcarie <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/EPB/estimate_intercept_tcarie.xlsx") %>%
+    arrange(match(Label, c("m","s","c","r"))) %>%
+     mutate(effect=ifelse(Label=="m","$\\beta_{0,M}$",
+                    ifelse(Label=="s","$\\beta_{0,S}$",
+                      ifelse(Label=="c","$\\beta_{0,C}$",
+                        ifelse(Label=="r","$\\beta_{0,R}$",NA)))),
+            Estimate=round(Estimate,4),
+            StdErr=round(StdErr,4)) %>%
+     select(c(effect, Estimate, StdErr))
+
+names(epb_estimate_intercept_tcarie) <- tolower(names(epb_estimate_intercept_tcarie))
+
+param <- rbind(epb_estimate_intercept_tcarie, epb_estimate_tcarie)
+
+colnames(param) <- c("Paramètre","Estimé","Erreur-type")
+kable(param, longtable=F, booktabs=T, escape=F ,linesep="", caption="Estimés des paramètres et erreurs-types") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+
+La figure 4.2, illustrée à la page suivante, présente les modèles de taux de carie des tiges cariées (et intervalles de confiance) selon le niveau de priorité de récolte en fonction de la hauteur totale. Plus la hauteur est élevée, plus le taux de carie a tendance à être faible. Les tiges associées à une priorité de récolte $C$ ou $R$ ont un très faible taux de carie et se comportent de façon très similaire. Le taux de carie des tiges associées à une priorité de récolte $S$ ont des taux de carie plus élevés et encore davantage pour les tiges associées à une priorité de récolte $M$.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align="center"}
+epb_tcarie_n_mscr <- as.matrix(epb_pred_tcarie %>%
+               group_by(mscr) %>%
+              summarise(n=n()) )
+
+epb_pred_tcarie %>%
+  ggplot(aes(x=ht_m, y=taux_carie, color=mscr)) +
+  geom_line(aes(y=pred_taux_carie), size=0.6) +
+  geom_ribbon(aes(ymin=lower_new, ymax=upper_new, fill=mscr), alpha=0.2, color=NA)+
+   scale_color_manual(values=c("#172e63","#e97610","#59b07c","#5976b0"),
+                    labels=c(paste0("M (n=",epb_tcarie_n_mscr[1,2],")"),paste0("S (n=",epb_tcarie_n_mscr[2,2],")"),
+                             paste0("C (n=",epb_tcarie_n_mscr[3,2],")"),paste0("R (n=",epb_tcarie_n_mscr[4,2],")"))) +
+  scale_fill_manual(values=c("#172e63","#e97610","#59b07c","#5976b0"),
+                    labels=c(paste0("M (n=",epb_tcarie_n_mscr[1,2],")"),paste0("S (n=",epb_tcarie_n_mscr[2,2],")"),
+                             paste0("C (n=",epb_tcarie_n_mscr[3,2],")"),paste0("R (n=",epb_tcarie_n_mscr[4,2],")"))) +
+  labs(x="hauteur totale (m)",y="taux de carie", col="priorité de\nrécolte", fill="priorité de\nrécolte") +
+  theme(text=element_text(family="serif", size=9),
+        plot.title = element_text(size = 9),
+        legend.justification = c(0.9,0.7),
+        legend.position = c(0.95,0.85),
+        legend.title = element_text(size = 9))
+
+epb_tcarie_ntotal <- epb_pred_tcarie %>%
+        summarise(n())
+```
+
+\begin{center} Figure \addtocounter{figure}{1}\thefigure: Modèles de taux de carie des tiges cariées selon le niveau de priorité de récolte en fonction de la hauteur totale (N = `r epb_tcarie_ntotal`) \end{center}
+
+\vspace{1em}
+
+### Taux de carie 
+
+Les résultats de la validation croisée sont présentés à la table 4.1.3. Le modèle surestime de 13.7% le taux de carie et l'erreur relative est de 380%. Les grandes valeurs relatives sont dues en partie aux très faibles taux de carie observés.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(formattable)
+
+epb_mod3_biais_err <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/EPB/mod3_biais_err.xlsx") %>%
+  mutate(MSCR_new = as.factor(ifelse(is.na(MSCR), 'Global', MSCR)),
+         MSCR_new2 = factor(MSCR_new, levels=c("Global","M","S","C","R")),
+         biais_rel=percent((biais_mod3/mean_mod3_obs),2),
+         err_rel=percent((err_mod3/mean_mod3_obs),2),
+         mean_mod3_obs=round(mean_mod3_obs,4),
+         biais_mod3=round(biais_mod3,4),
+         err_mod3=round(err_mod3,4)) %>%
+  arrange(MSCR_new2) %>%
+  select(MSCR_new2, '_FREQ_', mean_mod3_obs, biais_mod3, biais_rel, err_mod3, err_rel)
+  
+kable(epb_mod3_biais_err, longtable=F, booktabs=T, linesep="", col.names=c("Priorité de récolte","n","Taux de carie\nmoyen observé","Biais","Biais\nrelatif","Erreur", "Erreur\nrelative"), caption="Biais et erreurs du modèle prédiction de la proportion de carie, obtenus par la validation croisée") %>%
+  kable_styling(latex_options=c("HOLD_position")) %>%
+  row_spec(1, background="#C8CCD6", hline_after = TRUE) %>%
+  column_spec(1, width="5em") %>%
+  column_spec(3, width="8em") %>%
+  column_spec(5, width="4em") %>%
+  column_spec(7, width="4em") 
+```
+
+
+## Épinette noire
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+epn_pred_cdicho <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/EPN/pred_cdicho.xlsx") %>%
+     mutate(MSCR=factor(MSCR, levels=c("M","S","C","R")))%>%
+     filter(!is.na(age_EPN))
+
+names(epn_pred_cdicho) <- tolower(names(epn_pred_cdicho))
+
+#données simulées par le modèle en spécifiant une valeur moyenne d'âge et de jour_scr
+epn_pred_cdicho_dhp <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/EPN/epn_simul_cdicho.xlsx") %>%
+     mutate(MSCR=factor(MSCR, levels=c("M","S","C","R")))%>%
+     filter(!is.na(age_EPN))
+
+names(epn_pred_cdicho_dhp) <- tolower(names(epn_pred_cdicho_dhp))
+
+epn_pred_tcarie <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/EPN/pred_tcarie.xlsx") %>%
+     mutate(MSCR=factor(MSCR, levels=c("M","S","C","R")))
+
+names(epn_pred_tcarie) <- tolower(names(epn_pred_tcarie))
+```
+
+### Probabilité de carie
+
+Les variables retenues ici sont la priorité de récolte, le dhp, l'âge moyen et le nombre de jours dans la saison de croissance.
+
+$$ p=\frac{1}{1+e^{-(\beta_{0,P} + \beta_1dhp + \beta_2age + \beta_3jourscr)}} $$
+
+où :
+
+
+$dhp$ = dhp en *mm*  
+$age$ = âge moyen de l'épinette noire issu des arbres études         
+$jourscr$ = nombre de jours dans la saison de croissance
+
+Le paramètre $\beta_{0,P}$ est  associé à l'ordonnée à l'origine. La lettre *P* prend les valeurs *M*, *S*, *C* et *R* selon le niveau de priorité de récolte. La table 4.2.1 présente les paramètres du modèle.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+epn_estimate_cdicho <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/EPN/estimate_cdicho.xlsx") %>%
+     filter(Effect %in% c("DHP_MM","age_EPN","JOUR_SCR")) %>%
+     mutate(Effect=ifelse(Effect=="DHP_MM", "$\\beta_1$",
+                    ifelse(Effect=="age_EPN","$\\beta_2$",
+                      ifelse(Effect=="JOUR_SCR","$\\beta_3$",NA))),
+       Estimate=round(Estimate,4),
+            StdErr=round(StdErr,4)) %>%
+     select(c(Effect, Estimate, StdErr))
+
+names(epn_estimate_cdicho) <- tolower(names(epn_estimate_cdicho))
+
+epn_estimate_intercept_cdicho <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/EPN/estimate_intercept_cdicho.xlsx") %>%
+  arrange(match(Label, c("m","s","c","r"))) %>%
+     mutate(effect=ifelse(Label=="m","$\\beta_{0,M}$",
+                    ifelse(Label=="s","$\\beta_{0,S}$",
+                      ifelse(Label=="c","$\\beta_{0,C}$",
+                        ifelse(Label=="r","$\\beta_{0,R}$",NA)))),
+            Estimate=round(Estimate,4),
+            StdErr=round(StdErr,4)) %>%
+     select(c(effect, Estimate, StdErr))
+
+names(epn_estimate_intercept_cdicho) <- tolower(names(epn_estimate_intercept_cdicho))
+
+param <- rbind(epn_estimate_intercept_cdicho, epn_estimate_cdicho)
+
+colnames(param) <- c("Paramètre","Estimé","Erreur-type")
+kable(param, longtable=F, booktabs=T, escape=F, linesep="", caption="Estimés des paramètres et erreurs-types") %>%
+  kable_styling(latex_options=c("HOLD_position"), protect_latex = FALSE)
+```
+
+La figure 4.3, illustrée à la page suivante, présente les modèles de probabilité de carie (et intervalles de confiance) selon le niveau de priorité de récolte en fonction du dhp, pour des valeurs moyennes d'âge moyen de l'épinette noire et de nombre de jours dans la saison de croissance. Plus le dhp est élevé, plus les tiges, plus grande est la probabilité de carie. Les tiges associées à une priorité de récolte $M$ ou $S$ ont des probabilités de carie plus élevées.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align="center"}
+epn_cdicho_n_mscr <- as.matrix(epn_pred_cdicho %>%
+               group_by(mscr) %>%
+              summarise(n=n()) )
+
+ggplot()+
+scale_color_manual(values=c("#172e63","#e97610","#59b07c","#5976b0"), 
+                   labels=c(paste0("M (n=",epn_cdicho_n_mscr[1,2],")"),paste0("S (n=",epn_cdicho_n_mscr[2,2],")"),
+                            paste0("C (n=",epn_cdicho_n_mscr[3,2],")"),paste0("R (n=",epn_cdicho_n_mscr[4,2],")"))) +
+geom_line(data=epn_pred_cdicho_dhp, aes(y=pred_carie_dicho, x=dhp_mm, color=mscr)) +
+geom_ribbon(data=epn_pred_cdicho_dhp, aes(ymin=lower, ymax=upper, x=dhp_mm, fill=mscr), alpha=0.2, color=NA)+
+scale_fill_manual(values=c("#172e63","#e97610","#59b07c","#5976b0"),
+                  labels=c(paste0("M (n=",epn_cdicho_n_mscr[1,2],")"),paste0("S (n=",epn_cdicho_n_mscr[2,2],")"),
+                           paste0("C (n=",epn_cdicho_n_mscr[3,2],")"),paste0("R (n=",epn_cdicho_n_mscr[4,2],")")))+
+labs(x="dhp (mm)",y="probabilité de carie", col="priorité de\nrécolte", fill="priorité de\nrécolte")+
+theme(text=element_text(family="serif", size=9),
+        plot.title = element_text(size = 9),
+        legend.justification = c(1,0.7),legend.position = c(0.25,0.85),
+        legend.title = element_text(size = 9))
+
+epn_cdicho_ntotal <- epn_pred_cdicho %>%
+        summarise(n())
+```
+
+
+\begin{center} Figure \addtocounter{figure}{1}\thefigure: Modèles de probabilité de carie selon la priorité de récolte en fonction du dhp, pour des valeurs moyennes d'âge moyen de l'EPN et de nombre de jours dans la saison de croissance (N = `r epn_cdicho_ntotal`) \end{center}
+
+\vspace{1em}
+
+
+### Taux de carie des tiges cariées
+
+Les variables retenues ici sont la priorité de récolte et la hauteur totale.
+
+$$ log(taux carie) = \beta_{0,P} + \beta_1ht  $$
+
+où :
+
+$ht$ = hauteur totale en *m*
+\newline
+\newline
+Le paramètre $\beta_{0,P}$ est  associé à l'ordonnée à l'origine. La lettre *P* prend les valeurs *M*, *S*, *C* et *R* selon le niveau de priorité de récolte. La table 4.2.2 présente les paramètres du modèle.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+epn_estimate_tcarie <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/EPN/estimate_tcarie.xlsx") %>%
+     filter(Effect=="HT_M") %>%
+     mutate(Effect=ifelse(Effect=="HT_M", "$\\beta_1$",NA),
+       Estimate=round(Estimate,4),
+            StdErr=round(StdErr,4)) %>%
+     select(c(Effect, Estimate, StdErr))
+
+names(epn_estimate_tcarie) <- tolower(names(epn_estimate_tcarie))
+
+epn_estimate_intercept_tcarie <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/EPN/estimate_intercept_tcarie.xlsx") %>%
+    arrange(match(Label, c("m","s","c","r"))) %>%
+     mutate(effect=ifelse(Label=="m","$\\beta_{0,M}$",
+                    ifelse(Label=="s","$\\beta_{0,S}$",
+                      ifelse(Label=="c","$\\beta_{0,C}$",
+                        ifelse(Label=="r","$\\beta_{0,R}$",NA)))),
+            Estimate=round(Estimate,4),
+            StdErr=round(StdErr,4)) %>%
+     select(c(effect, Estimate, StdErr))
+
+names(epn_estimate_intercept_tcarie) <- tolower(names(epn_estimate_intercept_tcarie))
+
+param <- rbind(epn_estimate_intercept_tcarie, epn_estimate_tcarie)
+
+colnames(param) <- c("Paramètre","Estimé","Erreur-type")
+kable(param, longtable=F, booktabs=T, escape=F ,linesep="", caption="Estimés des paramètres et erreurs-types") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+La figure 4.4, illustrée à la page suivante, présente les modèles de taux de carie des tiges cariées (et intervalles de confiance) selon le niveau de priorité de récolte en fonction de la hauteur totale. Plus la hauteur est élevée, plus le taux de carie a tendance à être faible. Les tiges associées à une priorité de récolte $M$ ont une probabilité de carie plus élevée.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align="center"}
+epn_tcarie_n_mscr <- as.matrix(epn_pred_tcarie %>%
+               group_by(mscr) %>%
+              summarise(n=n()) )
+
+epn_pred_tcarie %>%
+  ggplot(aes(x=ht_m, y=taux_carie, color=mscr)) +
+  scale_color_manual(values=c("#172e63","#e97610","#59b07c","#5976b0"),
+                     labels=c(paste0("M (n=",epb_tcarie_n_mscr[1,2],")"),paste0("S (n=",epb_tcarie_n_mscr[2,2],")"),
+                              paste0("C (n=",epb_tcarie_n_mscr[3,2],")"),paste0("R (n=",epb_tcarie_n_mscr[4,2],")"))) +
+  
+  geom_line(aes(y=pred_taux_carie), size=0.6) +
+  geom_ribbon(aes(ymin=lower_new, ymax=upper_new, fill=mscr), alpha=0.2, color=NA)+
+  
+  scale_fill_manual(values=c("#172e63","#e97610","#59b07c","#5976b0"),
+                    labels=c(paste0("M (n=",epb_tcarie_n_mscr[1,2],")"),paste0("S (n=",epb_tcarie_n_mscr[2,2],")"),
+                             paste0("C (n=",epb_tcarie_n_mscr[3,2],")"),paste0("R (n=",epb_tcarie_n_mscr[4,2],")"))) +
+  
+  labs(x="hauteur totale (m)",y="taux de carie", col="priorité de\nrécolte", fill="priorité de\nrécolte") +
+  theme(text=element_text(family="serif", size=9),
+        plot.title = element_text(size = 9),
+        legend.justification = c(0.9,0.7),
+        legend.position = c(0.97,0.87),
+        legend.title = element_text(size = 9))
+
+epn_tcarie_ntotal <- epn_pred_tcarie %>%
+        summarise(n())
+```
+
+\begin{center} Figure \addtocounter{figure}{1}\thefigure: Modèles de taux de carie des tiges cariées selon le niveau de priorité de récolte en fonction de la hauteur totale (N = `r epn_tcarie_ntotal`) \end{center}
+
+\vspace{1em}
+
+### Taux de carie 
+
+Les résultats de la validation croisée sont présentés à la table 4.2.3. Le modèle sous-estime de 8.2% le taux de carie et l'erreur relative est de 480%. Les grandes valeurs relatives sont dues en partie aux très faibles taux de carie observés.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(formattable)
+
+epn_mod3_biais_err <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/EPN/mod3_biais_err.xlsx") %>%
+  mutate(MSCR_new = as.factor(ifelse(is.na(MSCR), 'Global', MSCR)),
+         MSCR_new2 = factor(MSCR_new, levels=c("Global","M","S","C","R")),
+         biais_rel=percent((biais_mod3/mean_mod3_obs),2),
+         err_rel=percent((err_mod3/mean_mod3_obs),2),
+         mean_mod3_obs=round(mean_mod3_obs,4),
+         biais_mod3=round(biais_mod3,4),
+         err_mod3=round(err_mod3,4)) %>%
+  arrange(MSCR_new2) %>%
+  select(MSCR_new2, '_FREQ_', mean_mod3_obs, biais_mod3, biais_rel, err_mod3, err_rel)
+  
+kable(epn_mod3_biais_err, longtable=F, booktabs=T, linesep="", col.names=c("Priorité de récolte","n","Taux de carie\nmoyen observé","Biais","Biais\nrelatif","Erreur", "Erreur\nrelative"), caption="Biais et erreurs du modèle prédiction de la proportion de carie, obtenus par la validation croisée") %>%
+  kable_styling(latex_options=c("HOLD_position")) %>%
+  row_spec(1, background="#C8CCD6", hline_after = TRUE) %>%
+  column_spec(1, width="5em") %>%
+  column_spec(3, width="8em") %>%
+  column_spec(5, width="4em") %>%
+  column_spec(7, width="4em") 
+```
+
+\newpage
+
+## Pin gris
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+pig_pred_cdicho <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/PIG/pred_cdicho.xlsx") %>%
+     filter(!is.na(AGE_PEE))
+
+names(pig_pred_cdicho) <- tolower(names(pig_pred_cdicho))
+
+#données simulées par le modèle 
+pig_pred_cdicho_simul <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/PIG/pig_simul_cdicho.xlsx") %>%
+     filter(!is.na(AGE_PEE))
+
+names(pig_pred_cdicho_simul) <- tolower(names(pig_pred_cdicho_simul))
+
+pig_pred_tcarie <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/PIG/pred_tcarie.xlsx") 
+
+names(pig_pred_tcarie) <- tolower(names(pig_pred_tcarie))
+```
+
+### Probabilité de carie
+
+La seule variable retenue est l'âge du peuplement écoforestier :
+
+$$ p=\frac{1}{1+e^{-(\beta_{0} + \beta_1agepee)}} $$
+
+où :
+
+$agepee$ = âge du peuplement écoforestier
+
+La table 4.3.1 présente les paramètres du modèle.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+pig_estimate_cdicho <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/PIG/estimate_cdicho.xlsx") %>%
+     filter(Effect %in% c("Intercept","AGE_PEE")) %>%
+     mutate(Effect=ifelse(Effect=="Intercept", "$\\beta_{0}$",
+                    ifelse(Effect=="AGE_PEE","$\\beta_1$",NA)),
+       Estimate=round(Estimate,4),
+            StdErr=round(StdErr,4)) %>%
+     select(c(Effect, Estimate, StdErr))
+
+names(pig_estimate_cdicho) <- tolower(names(pig_estimate_cdicho))
+
+colnames(pig_estimate_cdicho) <- c("Paramètre","Estimé","Erreur-type")
+kable(pig_estimate_cdicho, longtable=F, booktabs=T, escape=F, linesep="", caption="Estimés des paramètres et erreurs-types") %>%
+  kable_styling(latex_options=c("HOLD_position"), protect_latex = FALSE)
+```
+
+La figure 4.5 présente le modèle de probabilité de carie (et intervalles de confiance) en fonction de l'âge du peuplement écoforestier sondé. Plus l'âge du peuplement écoforestier est grand, plus la probabilité de carie est élevée.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align="center"}
+ggplot()+
+geom_line(data=pig_pred_cdicho_simul, aes(y=pred_carie_dicho, x=age_pee), color="#172e63") +
+geom_ribbon(data=pig_pred_cdicho_simul, aes(ymin=lower, ymax=upper, x=age_pee), alpha=0.2, color=NA, fill="#172e63") +
+labs(x="âge du peuplement écoforestier",y="probabilité de carie")+
+theme(text=element_text(family="serif", size=9),
+        plot.title = element_text(size = 9),
+        legend.justification = c(1,0.7),legend.position = c(0.98,0.3))
+
+pig_cdicho_ntotal <- pig_pred_cdicho %>%
+        summarise(n())
+```
+
+\begin{center} Figure \addtocounter{figure}{1}\thefigure: Modèle de probabilité de carie selon en fonction de l'âge du peuplement écoforestier (N = `r pig_cdicho_ntotal`)\end{center}
+
+\vspace{1em}
+
+
+### Taux de carie des tiges cariées
+
+La seule variable retenue est la hauteur totale :
+
+$$ log(taux carie) = \beta_{0} + \beta_1ht  $$
+
+où :
+
+$ht$ = hauteur totale en *m*
+
+La table 4.3.2 présente les paramètres du modèle.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+pig_estimate_tcarie <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/PIG/estimate_tcarie.xlsx") %>%
+     filter(Effect %in% c("Intercept","HT_M")) %>%
+     mutate(Effect=ifelse(Effect=="Intercept","$\\beta_{0}$",
+                    ifelse(Effect=="HT_M", "$\\beta_1$",NA)),
+       Estimate=round(Estimate,4),
+            StdErr=round(StdErr,4)) %>%
+     select(c(Effect, Estimate, StdErr))
+
+names(pig_estimate_tcarie) <- tolower(names(pig_estimate_tcarie))
+
+colnames(pig_estimate_tcarie) <- c("Paramètre","Estimé","Erreur-type")
+kable(pig_estimate_tcarie, longtable=F, booktabs=T, escape=F ,linesep="", caption="Estimés des paramètres et erreurs-types") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+La figure 4.6 présente le modèle de taux de carie des tiges cariées (et intervalles de confiance) en fonction de la hauteur totale. Le taux de carie diminue lorsque la hauteur totale est grande.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align="center"}
+pig_pred_tcarie %>%
+  ggplot(aes(x=ht_m, y=taux_carie)) +
+  geom_line(aes(y=pred_taux_carie), size=0.6, col="#172e63") +
+  geom_ribbon(aes(ymin=lower_new, ymax=upper_new), alpha=0.2,color="NA", fill="#172e63")+
+  labs(x="hauteur totale (m)",y="taux de carie") +
+  theme(text=element_text(family="serif", size=9),
+        plot.title = element_text(size = 9),
+        legend.justification = c(0.9,0.7),
+        legend.position = c(0.1,0.9))
+
+pig_tcarie_ntotal <- pig_pred_tcarie %>%
+        summarise(n())
+```
+
+\begin{center} Figure \addtocounter{figure}{1}\thefigure: Modèle du taux de carie des tiges cariées en fonction de la hauteur totale (N = `r pig_tcarie_ntotal`)\end{center}
+
+\vspace{1em}
+
+
+### Taux de carie 
+
+Les résultats de la validation croisée sont présentés à la table 4.3.3. Le modèle surestime de près de 28% le taux de carie et l'erreur relative est de 571%. Les grandes valeurs relatives sont dues en partie aux très faibles taux de carie observés.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+pig_mod3_biais_err <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/PIG/mod3_biais_err.xlsx") %>%
+  mutate(biais_rel=percent((biais_mod3/mean_mod3_obs),2),
+         err_rel=percent((err_mod3/mean_mod3_obs),2),
+         mean_mod3_obs=round(mean_mod3_obs,4),
+         biais_mod3=round(biais_mod3,4),
+         err_mod3=round(err_mod3,4)) %>%
+  select('_FREQ_', mean_mod3_obs, biais_mod3, biais_rel, err_mod3, err_rel)
+  
+kable(pig_mod3_biais_err, longtable=F, booktabs=T, linesep="", col.names=c("n","Taux de carie\nmoyen observé","Biais","Biais\nrelatif","Erreur", "Erreur\nrelative"), caption="Biais et erreurs du modèle prédiction de la proportion de carie, obtenus par la validation croisée") %>%
+  kable_styling(latex_options=c("HOLD_position")) %>%
+  row_spec(1, background="#C8CCD6", hline_after = TRUE) %>%
+ column_spec(2, width="8em") %>%
+  column_spec(4, width="4em") %>%
+  column_spec(6, width="4em") 
+```
+
+
+## Sapin baumier
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+sab_pred_cdicho <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/SAB/pred_cdicho.xlsx") %>%
+     mutate(MSCR=factor(MSCR, levels=c("M","S","C","R")),
+            mscr_tete_cas_mar= ifelse(MSCR=="M" & tete_cas_mar=="non","M,non",
+                                ifelse(MSCR=="M" & tete_cas_mar=="oui","M,oui",
+                                  ifelse(MSCR=="S" & tete_cas_mar=="non","S,non",
+                                   ifelse(MSCR=="S" & tete_cas_mar=="oui","S,oui",
+                                    ifelse(MSCR=="C" & tete_cas_mar=="non","C,non",
+                                     ifelse(MSCR=="C" & tete_cas_mar=="oui","C,oui",
+                                      ifelse(MSCR=="R" & tete_cas_mar=="non","R,non",NA))))))),
+            mscr_tete_cas_mar=factor(mscr_tete_cas_mar, levels=c("M,non","M,oui","S,non","S,oui","C,non","C,oui","R,non")))
+
+names(sab_pred_cdicho) <- tolower(names(sab_pred_cdicho))
+
+#données simulées par le modèle en spécifiant une valeur moyenne de jour_scr
+sab_pred_cdicho_jourscr <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/SAB/sab_simul_cdicho.xlsx") %>%
+     mutate(MSCR=factor(MSCR, levels=c("M","S","C","R")),
+            mscr_tete_cas_mar= ifelse(MSCR=="M" & tete_cas_mar=="non","M,non",
+                                ifelse(MSCR=="M" & tete_cas_mar=="oui","M,oui",
+                                  ifelse(MSCR=="S" & tete_cas_mar=="non","S,non",
+                                   ifelse(MSCR=="S" & tete_cas_mar=="oui","S,oui",
+                                    ifelse(MSCR=="C" & tete_cas_mar=="non","C,non",
+                                     ifelse(MSCR=="C" & tete_cas_mar=="oui","C,oui",
+                                      ifelse(MSCR=="R" & tete_cas_mar=="non","R,non",NA))))))),
+            mscr_tete_cas_mar=factor(mscr_tete_cas_mar,levels=c("M,non","M,oui","S,non","S,oui","C,non","C,oui","R,non")))
+
+names(sab_pred_cdicho_jourscr) <- tolower(names(sab_pred_cdicho_jourscr))
+
+sab_pred_tcarie <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/SAB/pred_tcarie.xlsx") %>%
+     mutate(mscr_dicho=factor(mscr_dicho, levels=c("1","0"), labels=c("M","S, C ou R")))
+
+names(sab_pred_tcarie) <- tolower(names(sab_pred_tcarie))
+```
+
+### Probabilité de carie
+
+Les variables retenues ici sont la priorité de récolte, la présence d'une tête cassée marchande, le dhp et le nombre de jours dans la saison de croissance.
+
+$$ p=\frac{1}{1+e^{-(\beta_{0,P,T} + \beta_1dhp + \beta_2jourscr)}} $$
+
+où :
+
+$dhp$ = dhp en *mm*       
+$jourscr$ = nombre de jours dans la saison de croissance
+
+Le paramètre $\beta_{0,P,T}$ est  associé à l'ordonnée à l'origine. La lettre *P* prend les valeurs *M*, *S*, *C* et *R* selon le niveau de priorité de récolte. La lettre *T* prend les valeurs 0 (absence) et 1 (présence) pour identifier la présence d'une tête cassée marchande. La table 4.4.1 présente les paramètres du modèle.  
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+sab_estimate_cdicho <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/SAB/estimate_cdicho.xlsx") %>%
+     filter(Effect %in% c("DHP_MM","JOUR_SCR")) %>%
+     mutate(Effect=ifelse(Effect=="DHP_MM", "$\\beta_1$",
+                    ifelse(Effect=="JOUR_SCR","$\\beta_2$",NA)),
+       Estimate=round(Estimate,4),
+            StdErr=round(StdErr,4)) %>%
+     select(c(Effect, Estimate, StdErr))
+
+names(sab_estimate_cdicho) <- tolower(names(sab_estimate_cdicho))
+
+sab_estimate_intercept_cdicho <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/SAB/estimate_intercept_cdicho.xlsx") %>%
+  filter(Label !="r,1") %>%
+  arrange(match(Label, c("m,0","m,1","s,0","s,1","c,0","c,1","r,0"))) %>%
+     mutate(effect=ifelse(Label=="m,0","$\\beta_{0,M,0}$",
+                    ifelse(Label=="m,1","$\\beta_{0,M,1}$",
+                     ifelse(Label=="s,0","$\\beta_{0,S,0}$",
+                      ifelse(Label=="s,1","$\\beta_{0,S,1}$",
+                       ifelse(Label=="c,0","$\\beta_{0,C,0}$",
+                        ifelse(Label=="c,1","$\\beta_{0,C,1}$",
+                         ifelse(Label=="r,0","$\\beta_{0,R,0}$",NA))))))),
+            Estimate=round(Estimate,4),
+            StdErr=round(StdErr,4)) %>%
+     select(c(effect, Estimate, StdErr))
+
+names(sab_estimate_intercept_cdicho) <- tolower(names(sab_estimate_intercept_cdicho))
+
+param <- rbind(sab_estimate_intercept_cdicho, sab_estimate_cdicho)
+
+colnames(param) <- c("Paramètre","Estimé","Erreur-type")
+kable(param, longtable=F, booktabs=T, escape=F, linesep="", caption="Estimés des paramètres et erreurs-types") %>%
+  kable_styling(latex_options=c("HOLD_position"), protect_latex = FALSE)
+```
+
+La figure 4.7, illustrée à la page suivante, présente les modèles de probabilité de carie (et intervalles de confiance) selon le niveau de priorité de récolte et la présente de tête cassée marchande en fonction du dhp, pour des valeurs moyennes du nombre de jours dans la saison de croissance. Plus le dhp est grand, plus la probabilité de carie sera grande. Les tiges associées à un niveau de priorité de récolte $M$ et qui ont une tête cassée marchande ont une plus grande probabilité de carie. De plus, les courbes associées aux combinaisons *S-oui* et *C-oui* ainsi que *S-non* et *C-non* sont difficilement différentiables puisque leurs ordonnées à l'origine sont très similaires (voir la table 4.4.1). 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align="center"}
+sab_cdicho_n_mscr <- as.matrix(sab_pred_cdicho %>%
+               group_by(mscr_tete_cas_mar) %>%
+              summarise(n=n()) )
+
+ggplot()+
+scale_color_manual(values=c("#172e63","#172e63","#e97610","#e97610","#59b07c","#59b07c","#5976b0"),
+            labels=c(paste0("M,non (n=",sab_cdicho_n_mscr[1,2],")"),paste0("M,oui (n=",sab_cdicho_n_mscr[2,2],")"),
+                     paste0("S,non (n=",sab_cdicho_n_mscr[3,2],")"),paste0("S,oui (n=",sab_cdicho_n_mscr[4,2],")"),
+                     paste0("C,non (n=",sab_cdicho_n_mscr[5,2],")"),paste0("C,oui (n=",sab_cdicho_n_mscr[6,2],")"),
+                     paste0("R,non (n=",sab_cdicho_n_mscr[7,2],")")))+
+geom_line(data=sab_pred_cdicho_jourscr, aes(y=pred_carie_dicho, x=dhp_mm, linetype=mscr_tete_cas_mar, color=mscr_tete_cas_mar)) +
+scale_linetype_manual(values=c("solid","longdash","solid","longdash","solid","longdash","solid"),
+                      labels=c(paste0("M,non (n=",sab_cdicho_n_mscr[1,2],")"),paste0("M,oui (n=",sab_cdicho_n_mscr[2,2],")"),
+                     paste0("S,non (n=",sab_cdicho_n_mscr[3,2],")"),paste0("S,oui (n=",sab_cdicho_n_mscr[4,2],")"),
+                     paste0("C,non (n=",sab_cdicho_n_mscr[5,2],")"),paste0("C,oui (n=",sab_cdicho_n_mscr[6,2],")"),
+                     paste0("R,non (n=",sab_cdicho_n_mscr[7,2],")"))) +
+geom_ribbon(data=sab_pred_cdicho_jourscr, aes(ymin=lower, ymax=upper, x=dhp_mm, fill=mscr_tete_cas_mar), alpha=0.2, color=NA)+
+scale_fill_manual(values=c("#172e63","#8b96b1","#e97610","#f4bb88","#59b07c","#acd7be","#5976b0"),
+            labels=c(paste0("M,non (n=",sab_cdicho_n_mscr[1,2],")"),paste0("M,oui (n=",sab_cdicho_n_mscr[2,2],")"),
+                     paste0("S,non (n=",sab_cdicho_n_mscr[3,2],")"),paste0("S,oui (n=",sab_cdicho_n_mscr[4,2],")"),
+                     paste0("C,non (n=",sab_cdicho_n_mscr[5,2],")"),paste0("C,oui (n=",sab_cdicho_n_mscr[6,2],")"),
+                     paste0("R,non (n=",sab_cdicho_n_mscr[7,2],")")))+
+labs(x="dhp (mm)",y="probabilité de carie", col="Priorité de récolte,\nTête cassée marchande", fill="Priorité de récolte,\nTête cassée marchande", linetype="Priorité de récolte,\nTête cassée marchande")+
+theme(text=element_text(family="serif", size=9),
+        plot.title = element_text(size = 9),
+        legend.justification = c(1,0.7),legend.position = c(0.98,0.5),
+        legend.title = element_text(size = 9))
+
+sab_cdicho_ntotal <- sab_pred_cdicho %>%
+        summarise(n())
+```
+
+\begin{center} Figure \addtocounter{figure}{1}\thefigure: Modèles de probabilité de carie selon la priorité de récolte et la présence de tête cassée marchande en fonction du dhp, pour un nombre de jours moyen dans la saison de croissance (N = `r sab_cdicho_ntotal`) \end{center}
+
+\vspace{1em}
+
+
+### Taux de carie des tiges cariées
+
+Les variables retenues ici sont la priorité de récolte et la hauteur totale.
+
+$$ log(taux carie) = \beta_{0,P} + \beta_1ht  $$
+
+où :
+
+$ht$ = hauteur totale en *m*
+\newline
+\newline
+Le paramètre $\beta_{0,P}$ est  associé à l'ordonnée à l'origine. La lettre *P* prend les valeurs 0 (priorité de récolte *S*, *C* ou *R*) ou 1 (priorité de récolte *M*). La table présente les paramètres du modèle.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+sab_estimate_tcarie <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/SAB/estimate_tcarie.xlsx") %>%
+     filter(Effect=="HT_M") %>%
+     mutate(Effect=ifelse(Effect=="HT_M", "$\\beta_1$",NA),
+       Estimate=round(Estimate,4),
+            StdErr=round(StdErr,4)) %>%
+     select(c(Effect, Estimate, StdErr))
+
+names(sab_estimate_tcarie) <- tolower(names(sab_estimate_tcarie))
+
+sab_estimate_intercept_tcarie <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/SAB/estimate_intercept_tcarie.xlsx") %>%
+    arrange(match(Label, c("0","1"))) %>%
+     mutate(effect=ifelse(Label=="0","$\\beta_{0,0}$",
+                    ifelse(Label=="1","$\\beta_{0,1}$",NA)),
+            Estimate=round(Estimate,4),
+            StdErr=round(StdErr,4)) %>%
+     select(c(effect, Estimate, StdErr))
+
+names(sab_estimate_intercept_tcarie) <- tolower(names(sab_estimate_intercept_tcarie))
+
+param <- rbind(sab_estimate_intercept_tcarie, sab_estimate_tcarie)
+
+colnames(param) <- c("Paramètre","Estimé","Erreur-type")
+kable(param, longtable=F, booktabs=T, escape=F ,linesep="", caption="Estimés des paramètres et erreurs-types") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+La figure 4.8 présente les modèles de taux de carie des tiges cariées (et intervalles de confiance) selon le niveau de priorité de récolte ($M$ vs $S$, $C$ ou $R$) en fonction de la hauteur totale. Plus la hauteur totale est grande, plus le taux de carie sera petit. Les tiges associées à une priorité de récolte $M$ ont des taux de carie plus élevés.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align="center"}
+sab_tcarie_n_mscr <- as.matrix(sab_pred_tcarie %>%
+               group_by(mscr_dicho) %>%
+              summarise(n=n()) )
+
+sab_pred_tcarie %>%
+  ggplot(aes(x=ht_m, y=taux_carie, color=mscr_dicho)) +
+  scale_color_manual(values=c("#172e63","#59b07c"), 
+                     labels=c(paste0("M (n=",sab_tcarie_n_mscr[1,2],")"),
+                              paste0("S, C ou R (n=",sab_tcarie_n_mscr[2,2],")"))) +
+  geom_line(aes(y=pred_taux_carie), size=0.6) +
+  geom_ribbon(aes(ymin=lower_new, ymax=upper_new, fill=mscr_dicho), alpha=0.2, color=NA)+
+  scale_fill_manual(values=c("#172e63","#59b07c"),
+                    labels=c(paste0("M (n=",sab_tcarie_n_mscr[1,2],")"),
+                             paste0("S, C ou R (n=",sab_tcarie_n_mscr[2,2],")"))) +
+  labs(x="hauteur totale (m)",y="taux de carie",col="priorité de\nrécolte", fill="priorité de\nrécolte") +
+  theme(text=element_text(family="serif", size=9),
+        plot.title = element_text(size = 9),
+        legend.justification = c(0.9,0.7),
+        legend.position = c(0.95,0.9),
+        legend.title = element_text(size = 9))
+
+sab_tcarie_ntotal <- sab_pred_tcarie %>%
+        summarise(n())
+```
+
+\begin{center} Figure \addtocounter{figure}{1}\thefigure: Modèles de taux de carie des tiges cariées selon le niveau de priorité de récolte (M vs S, C ou R) en fonction de la hauteur totale (N = `r sab_tcarie_ntotal`) \end{center}
+
+\vspace{1em}
+
+
+### Taux de carie 
+
+Les résultats de la validation croisée sont présentés à la table 4.4.3. Le modèle surestime de 4.7% le taux de carie et l'erreur relative est de 254%. Les grandes valeurs relatives sont dues en partie aux très faibles taux de carie observés.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+sab_mod3_biais_err <- read.xlsx("//Sef1271a/f1271i/Projets/Carie/Prediction_echelle_peuplement/Approche_modele_tige/PROG/SAB/mod3_biais_err.xlsx") %>%
+  mutate(MSCR_new = as.factor(ifelse(is.na(MSCR), 'Global', MSCR)),
+         MSCR_new2 = factor(MSCR_new, levels=c("Global","M","S","C","R")),
+         biais_rel=percent((biais_mod3/mean_mod3_obs),2),
+         err_rel=percent((err_mod3/mean_mod3_obs),2),
+         mean_mod3_obs=round(mean_mod3_obs,4),
+         biais_mod3=round(biais_mod3,4),
+         err_mod3=round(err_mod3,4)) %>%
+  arrange(MSCR_new2) %>%
+  select(MSCR_new2, '_FREQ_', mean_mod3_obs, biais_mod3, biais_rel, err_mod3, err_rel)
+  
+kable(sab_mod3_biais_err, longtable=F, booktabs=T, linesep="", col.names=c("Priorité de récolte","n","Taux de carie\nmoyen observé","Biais","Biais\nrelatif","Erreur", "Erreur\nrelative"), caption="Biais et erreurs du modèle prédiction de la proportion de carie, obtenus par la validation croisée") %>%
+  kable_styling(latex_options=c("HOLD_position")) %>%
+  row_spec(1, background="#C8CCD6", hline_after = TRUE) %>%
+  column_spec(1, width="5em") %>%
+  column_spec(3, width="8em") %>%
+  column_spec(5, width="4em") %>%
+  column_spec(7, width="4em")
+```
+
+## Conclusion
+
+Les deux modèles, soit la probabilité de carie et le taux de carie des tiges cariées, serviront à estimer le taux de carie de tous les arbres de la placette en vue d'étalonner des modèles à l'échelle du peuplement. Ces derniers modèles seront utilisés pour calculer et imputer des valeurs de taux de carie par essence pour chaque polygone forestier productif de la carte écoforestière.

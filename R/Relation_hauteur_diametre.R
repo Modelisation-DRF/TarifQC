@@ -1,0 +1,274 @@
+################################################################
+#   ISABELLE AUGER                                             #
+#                                                              #
+#   isabelle.augere@mrnf.gouv.qc.ca                            #
+#    last udate       July 2023                                #
+#                                                              #
+#                                                              #
+#   Function for estimating tree height for a list of trees    #
+#                                                              #
+#                                                              #
+#   Use ht_ass_ess.rda                                         #
+#       ht_ass_mil.rda                                         #
+#       ht_ass_vp.rda                                          #
+#       ht_ass_sd.rda                                          #
+#       ht_ass_pert.rda                                        #
+#       ht_liste_ess.rda                                       #
+#                                                              #
+################################################################
+
+
+#' Estimating total tree height from DBH and stand characteristics for a list of trees in plots
+#'
+#' @description Estimate total tree height in meter with Auger (2016) equation for a list of trees in plots in a data frame.
+#' Estimation can be deterministic or stochastic.
+#'
+#' @details
+#' The models for estimating tree height are linear mixed models calibrated by species (Auger 2016).
+#' There is a random plot effect and correlated residual errors with CorCar1 correlation fonction.
+#' This function estimates height, using deterministic parameters or stochastic parameters, for a given iteration and time step.
+#' If \code{mode_simul}='STO', the parameters must be loaded with \code{param_ht} function before using this function.
+#'
+#' Auger, I., 2016. Une nouvelle relation hauteur-diamètre tenant compte de l’influence de la station et
+#' du climat pour 27 essences commerciales du Québec. Gouvernement du Québec, ministère
+#' des Forêts, de la Faune et des Parcs, Direction de la recherche forestière. Note de recherche forestière no 146. 31 p.
+#'
+#' @param fic_arbres Dataframe containing a list trees in plots, with DBH and stand characteristics:
+#' \itemize{
+#'    \item id_pe: identifiant unique de la placette
+#'    \item dhpcm: dhp (cm) de l'arbre ou classe de dhp (>9 cm)
+#'    \item essence: code d'essence de l'arbre (ex: SAB, EPN, BOP)
+#'    \item no_arbre: identifiant de l'arbre ou de la combinaison dhp/essence, nécessaire seulement si \code{mode_simul}='STO'
+#'    \item nb_tige: nombre d'arbres de l'essence et de la classe de dhp, dans 400 m2
+#'    \item sdom_bio: sous-domaine bioclimatique, en majuscule (ex: 2E, 4O), domaines 1 à 6 sont traités
+#'    \item veg_pot: code de végétation potentielle, 3 premiers caractères du type écologique  (ex: FE3, MS2)
+#'    \item milieu: 4e caractère du type écologique, doit être numérique, une valeur de 0 à 9 (ex: 2)
+#'    \item p_tot: 1980-2010 mean total precipitations (mm)
+#'    \item t_ma: 1980-2010 mean annual temperature (Celcius)
+#'    \item altitude: altitude en m
+#' }
+#' @param mode_simul Simulation mode (STO = stochastic, DET = deterministic), default "DET"
+#' @param iteration If \code{mode_simul}='STO', iteration number to estime (default 1)
+#' @param step If \code{mode_simul}='STO', Time step to estimate (default 1)
+#' @param parametre_ht If \code{mode_simul}='STO', oject with model parameters values pour all iterations and time steps, provided by \code{param_ht} function. If \code{mode_simul}='DET', parameter values are prepared directly in this function, but \code{param_ht} can also be used.
+#' @param grouping_vars If \code{mode_simul}='DET', columns to be added as grouping variables in addition to id_pe variable for calculating basal area of the plots. For example, if there is multiple measurements, add measurement id as grouping variable: grouping_vars='var1'. If multiple grouping variables, use grouping_vars=c('var1','var2'). Optional. If \code{mode_simul}='STO', this parameter can not be used. In this case, concatenate all the grouping variables in one variable id_pe
+#'
+#' @return Dataframe \code{fic_arbres} with column hauteur_pred with estimated height in meter
+#' @export
+#'
+#' @examples
+#' # Exemple 1: DETERMINISTE: un seul mesurage par arbre ---------------------------------------
+#' DataHt <- relation_h_d(fic_arbres=fic_arbres_test)
+#'
+#' # Exemple 2: DETERMINISTE: avec grouping_vars, plusieurs mesurages par arbre ----------------
+#' DataHt <- relation_h_d(fic_arbres=fic_artemis_det, grouping_vars='step')
+#'
+#' # Exemple 3: STOCHASTIQUE: un seul mesurage par arbre ---------------------------------------
+#' # Générer les paramètres pour plusieurs itérations
+#' parametre_ht <- param_ht(fic_arbres=fic_arbres_test, mode_simul='STO', nb_iter=10)
+#' # Estimer la hauteur pour l'itération 2
+#' DataHt <- relation_h_d(fic_arbres=fic_arbres_test, mode_simul='STO', iteration=2, parametre_ht=parametre_ht)
+#'
+#' # Exemple 4: STOCHASTIQUE: plusieurs mesurages par arbre ------------------------------------
+#' # Générer les paramètres pour plusieurs itérations et steps
+#' parametre_ht <- param_ht(fic_arbres=fic_artemis_sto, mode_simul='STO', nb_iter=10, nb_step=5)
+#' # Estimer la hauteur pour l'itération 2 et la step 3
+#' DataHt <- relation_h_d(fic_arbres=fic_artemis_sto[fic_artemis$iter==10 & fic_artemis$step==3,], mode_simul='STO', iteration=2, step=3, parametre_ht=parametre_ht)
+#'
+#' # Exemple 5: STOCHASTIQUE: traiter toutes les itérations et steps ---------------------------
+#' # Générer les paramètres du modèle de hauteur pour toutes les itérations et time steps
+#' nb_iter <- length(unique(fic_artemis_sto$iter)) # 10
+#' nb_step <- length(unique(fic_artemis_sto$step)) # 5
+#' parametre_ht <- param_ht(fic_arbres=fic_artemis_sto, mode_simul='STO', nb_iter=nb_iter, nb_step=nb_step)
+#' # Appliquer le modèle de hauteur à chaque iteration/step
+#' fic_artemis_final1 <- NULL
+#' for (i in 1:nb_iter){
+#'   for (k in 1:nb_step){
+#'       ht <- relation_h_d(fic_arbres=fic_artemis_sto[fic_artemis_sto$iter==i & fic_artemis_sto$step==k,], mode_simul='STO', iteration=i, step=k, parametre_ht=parametre_ht)
+#'       fic_artemis_final1 <- bind_rows(fic_artemis_final1, ht)
+#'       }
+#'    }
+#'
+#' # On peut aussi paralléliser les deux boucles for
+#' nb_iter <- length(unique(fic_artemis_sto$iter)) # 10
+#' nb_step <- length(unique(fic_artemis_sto$step)) # 5
+#' parametre_ht <- param_ht(fic_arbres=fic_artemis_sto, mode_simul='STO', nb_iter=nb_iter, nb_step=nb_step)
+#' # Appliquer le modèle de hauteur à chaque iteration/step
+#' registerDoFuture()
+#' plan(multisession)
+#' fic_artemis_final2 <- bind_rows(
+#'   foreach (i = 1:nb_iter) %:% # nesting operator
+#'       foreach (k = 1:nb_step) %dopar% {
+#'             fic <- relation_h_d(fic_arbres=fic_artemis_sto[fic_artemis$iter==i & fic_artemis$step==k,], mode_simul='STO', iteration=i, step=k, parametre_ht=parametre_ht)
+#'             }
+#'  )
+relation_h_d<-function (fic_arbres, mode_simul="DET", iteration=1, step=1,  parametre_ht=NULL, grouping_vars=NULL) {
+
+  #fic_arbres=fic_arbres_test; mode_simul='STO'; iteration=1; step=1; parametre_ht=parametre_ht;
+  #fic_arbres=fic_arbres_test; mode_simul='DET'; parametre_ht=parametre_ht;
+
+# le parametre grouping_vars ne peut etre utilisé qu'avec le mode stochastique
+warng <- NULL
+if (mode_simul=='STO' & length(grouping_vars)>0){
+  grouping_vars <- NULL
+  warng <- "grouping_vars can not be used with mode_simul=STO"
+}
+
+
+ii <- iteration
+k <- step
+grouping_vars <- c('id_pe', grouping_vars)
+
+# si mode déterministe et que parametre_ht est vide, générer les paramètres
+if (mode_simul=='DET' & length(parametre_ht)==0){
+  parametre_ht <- param_ht(fic_arbres=fic_arbres, mode_simul='DET')
+}
+
+# fichier de paramètres de toutes les essences de l'itération i: les paramètres sont dans la liste de listes parametre_ht, une liste par essence, et pour chaque essence, une liste de 4 elements,
+# dont 1: essence, 2: effets fixes, 3: effet aléatoire de placette sur ldhp2, 4: erreur residuelle
+
+# effet fixes, une ligne par essence
+param_ht_tr <- bind_rows(lapply(ht_liste_ess, function(x) parametre_ht[[x]]$effet_fixe %>% filter(iter==ii) %>% dplyr::select(-iter)))
+# remplacer tous les NA par des 0
+param_ht_tr <-  param_ht_tr %>% replace(is.na(.), 0)
+
+# compiler la st a la placette car on a besoin de sttot dans la relation h-d (avec les non commerciaux)
+compil <- fic_arbres %>%
+  group_by_at(vars(all_of(grouping_vars))) %>%
+  summarise(sum_st_ha = sum(pi * (dhpcm/2/100)^2 * nb_tige * 25),
+            dens = sum(nb_tige*25),
+            dhp_moy = sqrt((sum_st_ha*40000)/(dens*pi)))
+
+# ajouter la st au fichier des arbres et preparer les autres variables necessaires
+arbre2 <- inner_join(fic_arbres, compil, by = grouping_vars) %>%
+  rename(type_eco4=milieu) %>%
+  mutate(sdom_orig = sdom_bio,
+         logdhp = log(dhpcm+1),
+         cl_perturb="NON",
+         rdhp = dhpcm/dhp_moy,
+         sdom_bio = ifelse(sdom_bio == '1', "1OUEST",
+                           ifelse(sdom_bio=='2E',"2EST",
+                                  ifelse(sdom_bio=="2O","2OUEST",
+                                         ifelse(sdom_bio=='3E','3EST',
+                                                ifelse(sdom_bio=='3O',"3OUEST",
+                                                       ifelse(sdom_bio=='4E',"4EST",
+                                                              ifelse(sdom_bio=="4O","4OUEST",
+                                                                     ifelse(sdom_bio=='5E','5EST',
+                                                                            ifelse(sdom_bio=='5O',"5OUEST",
+                                                                                   ifelse(sdom_bio=='6E','6EST',
+                                                                                          ifelse(sdom_bio=='6O',"6OUEST",sdom_bio))))))))))))
+
+arbre2a <-arbre2 %>%
+  mutate(essenceBck=essence, essence=ifelse(is.na(essence)==TRUE,GrEspece,essence)) %>%
+  left_join(ht_ass_ess, by="essence") %>%
+  rename(Essence_ori = essenceBck) %>%
+  dplyr::select(-essence) %>%
+  rename(essence=essence_hauteur)
+
+# association des classes des variables categoriques selon l'essence au fichier des arbres
+arbre3 <- left_join(arbre2a, ht_ass_pert, by = c("cl_perturb", "essence"))
+arbre4 <- left_join(arbre3, ht_ass_mil, by = c("type_eco4", "essence"))
+arbre5 <- left_join(arbre4, ht_ass_sd, by = c("sdom_bio", "essence"))
+arbre6 <- left_join(arbre5, ht_ass_vp, by = c("veg_pot", "essence"))
+
+# merger le fichier des parametres au fichier des arbres
+arbre7 <- left_join(arbre6, param_ht_tr, by = "essence")
+
+if (mode_simul=='STO'){
+  # effet aléatoire: une ligne par placette
+  rand_ldhp2 <- bind_rows(lapply(ht_liste_ess, function(x) parametre_ht[[x]]$random_placette %>% filter(iter==ii) %>% dplyr::select(-iter))) # le fichier random_placette a autant de lignes que de placette x nb_iter dans le fichier arbre, donc random_ldhp2 aura 27 x nb_placette
+  # erreur résiduelle: une ligne par arbre
+  resid <- bind_rows(lapply(ht_liste_ess, function(x) parametre_ht[[x]]$erreur_residuelle %>% filter(iter==ii, step==k) %>% dplyr::select(-iter,-step))) # le fichier erreur_residuelle a autant de lignes que le nombre d'arbres dans le fichier arbre x nb_iter x nb_step, donc resid aura 27 x nb arbre
+  # merger le fichier des effets aléatoires de placette
+  arbre7a <- left_join(arbre7, rand_ldhp2, by = c("id_pe","essence"))
+  # merger le fichier des erreurs résiduelle arbres
+  arbre7b <- left_join(arbre7a, resid, by = c("id_pe","no_arbre","essence"))
+}
+else{
+  arbre7b <- arbre7 %>% mutate(res_arbre=0, random_ldhp2=0)
+}
+
+# appliquer l'equation
+arbre8 <- arbre7b %>%
+  ungroup() %>%
+  mutate(eq_ldhp = ef_ldhp * logdhp,
+         eq_alt = ef_alt * altitude * logdhp,
+         eq_ptot = ef_ptot * p_tot * logdhp,
+         eq_tmoy = ef_tmoy * t_ma * logdhp,
+         eq_st = ef_st * sum_st_ha * logdhp,
+         eq_rdhp = ef_rdhp * rdhp * logdhp,
+         eq_ldhp2 = (ef_ldhp2+random_ldhp2) * logdhp * logdhp) %>%
+  mutate(eq_pert = ifelse(pert=='NON', pert_NON * logdhp,
+                          ifelse(pert=='INT', pert_INT * logdhp,
+                                 ifelse(pert=='MOY', pert_MOY * logdhp,
+                                        NA))),
+         eq_sdom = ifelse(sdom=='1', sd_1 * logdhp,
+                          ifelse(sdom=='2EST', sd_2EST * logdhp,
+                                 ifelse(sdom=='2OUEST', sd_2OUEST * logdhp,
+                                        ifelse(sdom=='3EST', sd_3EST * logdhp,
+                                               ifelse(sdom=='3OUEST', sd_3OUEST * logdhp,
+                                                      ifelse(sdom=='4EST', sd_4EST * logdhp,
+                                                             ifelse(sdom=='4OUEST', sd_4OUEST * logdhp,
+                                                                    ifelse(sdom=='5EST', sd_5EST * logdhp,
+                                                                           ifelse(sdom=='5OUEST', sd_5OUEST * logdhp,
+                                                                                  ifelse(sdom=='6EST', sd_6EST * logdhp,
+                                                                                         ifelse(sdom=='6OUEST', sd_6OUEST * logdhp,
+                                                                                                NA))))))))))),
+         eq_mil = ifelse(milieu==0, mil_0 * logdhp,
+                         ifelse(milieu==1, mil_1 * logdhp,
+                                ifelse(milieu==2, mil_2 * logdhp,
+                                       ifelse(milieu==3, mil_3 * logdhp,
+                                              ifelse(milieu==4, mil_4 * logdhp,
+                                                     ifelse(milieu==5, mil_5 * logdhp,
+                                                            ifelse(milieu==6, mil_6 * logdhp,
+                                                                   ifelse(milieu==7, mil_7 * logdhp,
+                                                                          ifelse(milieu==8, mil_8 * logdhp,
+                                                                                 ifelse(milieu==9, mil_9 * logdhp,
+                                                                                        NA)))))))))),
+         eq_vp = ifelse(vp=='FC1', vp_FC1 * logdhp,
+                    ifelse(vp=='FE1', vp_FE1 * logdhp,
+                        ifelse(vp=='FE2', vp_FE2 * logdhp,
+                               ifelse(vp=='FE3', vp_FE3 * logdhp,
+                                      ifelse(vp=='FE4', vp_FE4 * logdhp,
+                                             ifelse(vp=='FE5', vp_FE5 * logdhp,
+                                                    ifelse(vp=='FE6', vp_FE6 * logdhp,
+                                                       ifelse(vp=='FO1', vp_FO1 * logdhp,
+                                                           ifelse(vp=='ME1', vp_ME1 * logdhp,
+                                                                  ifelse(vp=='MF1', vp_MF1 * logdhp,
+                                                                         ifelse(vp=='MJ1', vp_MJ1 * logdhp,
+                                                                                ifelse(vp=='MJ2', vp_MJ2 * logdhp,
+                                                                                       ifelse(vp=='MS1', vp_MS1 * logdhp,
+                                                                                              ifelse(vp=='XS2' & essence=='SAB', vp_XS2 * logdhp,
+                                                                                                  ifelse(vp=='MS2' & essence!='SAB', vp_MS2 * logdhp,
+                                                                                                     ifelse(vp=='MS4', vp_MS4 * logdhp,
+                                                                                                            ifelse(vp=='MS6', vp_MS6 * logdhp,
+                                                                                                                   ifelse(vp=='RB1', vp_RB1 * logdhp,
+                                                                                                                          ifelse(vp=='RB5', vp_RB5 * logdhp,
+                                                                                                                                 ifelse(vp=='RC3', vp_RC3 * logdhp,
+                                                                                                                                        ifelse(vp=='RE1', vp_RE1 * logdhp,
+                                                                                                                                               ifelse(vp=='RE2', vp_RE2 * logdhp,
+                                                                                                                                                      ifelse(vp=='RE3', vp_RE3 * logdhp,
+                                                                                                                                                             ifelse(vp=='RE4', vp_RE4 * logdhp,
+                                                                                                                                                                    ifelse(vp=='RP1', vp_RP1 * logdhp,
+                                                                                                                                                                           ifelse(vp=='RS1', vp_RS1 * logdhp,
+                                                                                                                                                                                  ifelse(vp=='RS2', vp_RS2 * logdhp,
+                                                                                                                                                                                         ifelse(vp=='RS3', vp_RS3 * logdhp,
+                                                                                                                                                                                                ifelse(vp=='RS4', vp_RS4 * logdhp,
+                                                                                                                                                                                                       ifelse(vp=='RS5', vp_RS5 * logdhp,
+                                                                                                                                                                                                              ifelse(vp=='RT1', vp_RT1 * logdhp,
+                                                                                                                                                                                                                     NA)))))))))))))))))))))))))))))))
+  ) %>%
+  mutate(hauteur_pred = ifelse(!is.na(essence) & dhpcm>9, 1.3 + res_arbre + eq_ldhp + eq_alt + eq_ptot + eq_tmoy + eq_st + eq_rdhp + eq_pert + eq_sdom + eq_mil + eq_vp + eq_ldhp2, NA)) %>%
+  dplyr::select(-res_arbre, -random_ldhp2, -dens, -dhp_moy, -contains("sd_"), -contains("pert_"), -contains("mil_"), -contains("vp_"), -contains("ef_"), -contains("eq_"), -logdhp, -rdhp, -sum_st_ha, -pert, -milieu, -vp, -sdom, -essence, -cl_perturb, -sdom_bio) %>%
+  rename(essence=Essence_ori, milieu=type_eco4, sdom_bio=sdom_orig)
+
+if (length(warng)==0) {fichier=arbre8}
+else {fichier=warng}
+
+return(fichier)
+}
+
+
+
+
+

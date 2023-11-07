@@ -1,0 +1,24 @@
+Package: TarifQC
+Type: Package
+Title: Estimating total tree height and merchantable volume
+Version: 1.0.0
+Author: Isabelle Auger, isabelle.auger@mrnf.gouv.qc.ca
+Maintainer: Isabelle Auger <isabelle.auger@mrnf.gouv.qc.ca>
+Description: Estimating total tree height with the model from Auger (2016)
+    and estimating tree merchantable volume with the model from Fortin et al. (2007). 
+	Estimation can be stochastic or deterministic.
+License: What license is it under?
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.2.3
+Suggests: 
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+VignetteBuilder: knitr
+Depends: 
+    tidyverse
+Imports: 
+    doFuture,
+    MASS

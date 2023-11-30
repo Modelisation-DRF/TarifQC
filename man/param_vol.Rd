@@ -2,34 +2,44 @@
 % Please edit documentation in R/Param_vol.R
 \name{param_vol}
 \alias{param_vol}
-\title{Generating parameters of the merchantable tree volume model from Fortin et al. (2007)}
+\title{Génère les paramètres pour estimer le volume marchand sans écorce d'un arbre avec l'équation de Fortin et al. (2007)}
 \usage{
-param_vol(fic_arbres, mode_simul = "DET", nb_iter = 1, seed_value = NULL)
+param_vol(
+  fic_arbres,
+  mode_simul = "DET",
+  nb_iter = 1,
+  nb_step = 1,
+  seed_value = NULL
+)
 }
 \arguments{
-\item{fic_arbres}{Dataframe with a list of trees for which volume must be estimated, at least tree ID (no_arbre) and plot Id (id_pe) must be present}
+\item{fic_arbres}{Une table contenant la liste d'arbres dont le volume est à estimer. La table doit contenir les variables \code{no_arbre} (l'identifiant de l'arbre) et \code{id_pe} (l'identifiant de la placette).}
 
-\item{mode_simul}{Simulation mode (STO = stochastic, DET = deterministic), default "DET"}
+\item{mode_simul}{Le mode de simulation (STO = stochastiqie, DET = déterministe), par défaut "DET".}
 
-\item{nb_iter}{Number of iterations if stochastic mode (default 1), ignored if \code{mode_simul="DET"}}
+\item{nb_iter}{Le nombre d'itérations si le mode stochastique est utilisé, doit être > 1. Ignoré si \code{mode_simul="DET"}.}
 
-\item{seed_value}{Optionnal parameter to set the seed value for random number generation. Usually used for testing for reproductibility}
+\item{nb_step}{Le nombre d'années pour lesquelles on veut estimer le volume pour un même arbre (par défaut 1), ignoré si \code{mode_simul="DET"}.}
+
+\item{seed_value}{La valeur du seed pour la génération de nombres aléatoires. Généralement utilisé pour les tests de la fonction. Optionnel.}
 }
 \value{
-A list of lists, one list per iteration, and for each iteration, a list with 3 elements:
+La fonction retourne une liste de listes, soit une liste par itération. Pour une itération, la liste contient 3 éléments:
+
 \enumerate{
-  \item effet_fixe : dataframe of fixed effect parameter values (one line per species for which there is a volume model)
-  \item random_placette: dataframe of random plot effect values (one line per plot)
-  \item erreur_residuelle : dataframe of residual error values (one line per tree)
+  \item effet_fixe : une table avec 5 colonnes: 3 pour les paramètres des effets fixes de l'équation, numéro de l'itération et essence. Une ligne par essence.
+  \item random_placette: une table avec 3 colonnes: effet aléatoire de placette, le numéro de l'itération et l'identifiant de la placette. Une ligne par placette/itération/step. 0 si \code{mode_simul="DET"}.
+  \item erreur_residuelle : une table avec l'erreur résiduelle associée à chaque essence (une colonne par essence), identifiant de la placette, identifiant de l'arbre, et numéro de l'itération. Une ligne par arbre/placette/itération. 0 si \code{mode_simul="DET"}.
 }
 }
 \description{
-Generate parameters of the merchantable tree volume model of Fortin et al. (2007), deterministic or stochastic, for each tree of each plot and for all iterations
+Génère les paramètres pour estimer le volume marchand sans écorce d'un arbre avec l'équation de Fortin et al. (2007)
+Les paramètres peuvent être générés de façon déterministe ou stochastique.
+Si le mode stochastique est utilisé, les paramètres seront générés pour tous les arbres/itétations/années.
 }
 \details{
-The model for estimating merchantable tree volume is a linear mixed model with species as a covariate (Fortin et al. 2007).
-There is a random plot effect and a viree random effect, but only the plot random effect is generated.
-The residual errors are not correlated. There is a covariance matrix of fixed effects.
+L'équation pour estimer le volume marchand a été étalonnée avec un modèle linéaire mixte où l'essence est une covariable dans l'équation (Fortin et al. 2007).
+Le modèle inclut un effet aléatoire de placette et un effet aléatoire de virée, mais seulement l'effet aléatoire de placette est simulé.
 
 Fortin, M., J. DeBlois, S. Bernier et G. Blais, 2007. Mise au point d’un tarif de cubage général pour
 les forêts québécoises : une approche pour mieux évaluer l’incertitude associée aux prévisions.
@@ -39,7 +49,10 @@ For. Chron. 83: 754-765.
 # Mode déterministe
 parametre_vol <- param_vol(fic_arbres=fic_arbres_test)
 
-# Mode stochastique, 10 itérations
+# Mode stochastique, pour une seule année et 10 itérations
 parametre_vol <- param_vol(fic_arbres=fic_arbres_test, mode_simul='STO', nb_iter=10)
+
+#' # Mode stochastique, plusieurs années et 10 itérations
+parametre_vol <- param_vol(fic_arbres=fic_arbres_test, mode_simul='STO', nb_iter=10, nb_step=3)
 
 }

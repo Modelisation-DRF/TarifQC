@@ -1,9 +1,0 @@
-#' @keywords internal
-"_PACKAGE"
-
-## usethis namespace: start
-#' TarifQC: A package for estimating total tree height and merchantable volume for Quebec's forest stands
-#' @docType package
-#' @name TarifQC
-## usethis namespace: end
-NULL

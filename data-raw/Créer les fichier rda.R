@@ -14,6 +14,8 @@
 #### RELATION HT-DHP ####
 
 # fichier association des essences pour le modèle de hauteur-dhp
+library(readxl)
+library(sas7bdat)
 ht_ass_ess <- read_excel("data-raw/Parametre_ht-dhp/index_essence.xls")
 
 # fichier d'associasions des sdom, pert, etc. pour les modèles ht-dhp, un fichier par essence
@@ -42,7 +44,8 @@ for (ess in liste_ess_ht) {
   ht_ass_vp <- bind_rows(ht_ass_vp, ass_v)
 }
 ht_ass_sd <- ht_ass_sd %>% rename(sdom_bio=SDOM_BIO)
-
+ht_ass_mil <- ht_ass_mil %>% mutate(type_eco4 = as.character(type_eco4),
+                                    milieu = as.character(milieu))
 
 
 # Fichiers des paramètres pour la relation ht-dhp, un par essence, pour la fonction param_ht_stoch()
@@ -115,14 +118,16 @@ tarif_param_random <- read.sas7bdat("data-raw/Parametre_vol/covparms.sas7bdat")
 # fichier association des essences aux essences du tarif de cubage
 tarif_ass_ess <- read_delim("data-raw/Parametre_vol/Essences_Volume.csv", delim=";")
 
-
-
-
+# fichier d'association des reg_eco aux sdom_bio
+regeco_ass_sdom <- read_delim("data-raw/Ass_regeco_sdombio.csv", delim=";")
+regeco_ass_sdom <- regeco_ass_sdom %>% mutate(dom_bio = as.character(dom_bio))
 
 # tous les fichier à mettre dans le rda
 usethis::use_data(ht_ass_ess, ht_liste_ess, ht_ass_pert, ht_ass_mil, ht_ass_sd, ht_ass_vp, ht_param_fixe, ht_param_cov, ht_param_random,
                   tarif_param_fixe, tarif_param_cov, tarif_param_random, tarif_ass_ess,
+                  regeco_ass_sdom,
                   internal=TRUE, overwrite = TRUE)
+
 
 
 #tar('TarifQC.tar.gz', compression = 'gzip', tar="tar")

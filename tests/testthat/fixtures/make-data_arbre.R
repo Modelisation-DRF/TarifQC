@@ -31,17 +31,17 @@ id9<-c("RE4", "RE7", "RE1")
 id10<-c("RS1", "RS2", "RS3")
 id11<-c("RS4", "RS5", "RS7")
 
-id1 <- data.frame(veg_pot=id1, sdom_bio="1", milieu=0)
-id2 <- data.frame(veg_pot=id2, sdom_bio="2E", milieu=1)
-id3 <- data.frame(veg_pot=id3, sdom_bio="2O", milieu=2)
-id4 <- data.frame(veg_pot=id4, sdom_bio="3E", milieu=3)
-id5 <- data.frame(veg_pot=id5, sdom_bio="3O", milieu=4)
-id6 <- data.frame(veg_pot=id6, sdom_bio="4E", milieu=5)
-id7 <- data.frame(veg_pot=id7, sdom_bio="4O", milieu=6)
-id8 <- data.frame(veg_pot=id8, sdom_bio="5E", milieu=7)
-id9 <- data.frame(veg_pot=id9, sdom_bio="5O", milieu=8)
-id10 <- data.frame(veg_pot=id10, sdom_bio="6E", milieu=9)
-id11 <- data.frame(veg_pot=id11, sdom_bio="6O", milieu=0)
+id1 <- data.frame(veg_pot=id1, sdom_bio="1", milieu='0')
+id2 <- data.frame(veg_pot=id2, sdom_bio="2E", milieu='1')
+id3 <- data.frame(veg_pot=id3, sdom_bio="2O", milieu='2')
+id4 <- data.frame(veg_pot=id4, sdom_bio="3E", milieu='3')
+id5 <- data.frame(veg_pot=id5, sdom_bio="3O", milieu='4')
+id6 <- data.frame(veg_pot=id6, sdom_bio="4E", milieu='5')
+id7 <- data.frame(veg_pot=id7, sdom_bio="4O", milieu='6')
+id8 <- data.frame(veg_pot=id8, sdom_bio="5E", milieu='7')
+id9 <- data.frame(veg_pot=id9, sdom_bio="5O", milieu='8')
+id10 <- data.frame(veg_pot=id10, sdom_bio="6E", milieu='9')
+id11 <- data.frame(veg_pot=id11, sdom_bio="6O", milieu='0')
 
 id <- bind_rows(id1, id2, id3, id4, id5, id6, id7, id8, id9, id10, id11) %>%
   mutate(id_pe=row_number(),
@@ -82,7 +82,7 @@ saveRDS(data_arbre_vol_attendu, "tests/testthat/fixtures/data_arbre_vol_attendu.
 
 
 # fichier de ht attendu en mode stochastique, en fixant le seed à 20
-parametre_ht_attendu_sto <- param_ht(fic_arbres=data_arbre, mode_simul = 'STO', nb_iter = 1, seed_value = 20)
+parametre_ht_attendu_sto <- param_ht(fic_arbres=data_arbre, mode_simul = 'STO', nb_iter = 2, seed_value = 20)
 data_arbre_attendu_sto <- relation_h_d(fic_arbres=data_arbre, parametre_ht=parametre_ht_attendu_sto, mode_simul = 'STO', iteration=1)
 saveRDS(data_arbre_attendu_sto, "tests/testthat/fixtures/data_arbre_attendu_sto.rds")
 saveRDS(parametre_ht_attendu_sto, "tests/testthat/fixtures/parametre_ht_attendu_sto.rds")
@@ -90,7 +90,7 @@ saveRDS(parametre_ht_attendu_sto, "tests/testthat/fixtures/parametre_ht_attendu_
 
 # fichier attendu pour le volume en mode stochastique
 # une seule ligne par essence est suffisant
-param_vol_attendu_sto <- param_vol(fic_arbres=data_arbre_vol, mode_simul = 'STO', nb_iter = 1, seed_value=20)
+param_vol_attendu_sto <- param_vol(fic_arbres=data_arbre_vol, mode_simul = 'STO', nb_iter = 2, seed_value=20)
 saveRDS(param_vol_attendu_sto, "tests/testthat/fixtures/param_vol_attendu_sto.rds")
 data_arbre_vol_attendu_sto <- cubage(fic_arbres=data_arbre_vol, mode_simul='STO', iteration=1, parametre_vol=param_vol_attendu_sto)
 saveRDS(data_arbre_vol_attendu_sto, "tests/testthat/fixtures/data_arbre_vol_attendu_sto.rds")

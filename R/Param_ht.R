@@ -5,9 +5,8 @@
 #    last udate       July 2023                                #
 #                                                              #
 #                                                              #
-#   Function generating parameter values of tree height model  #
 #                                                              #
-#   Use                                                        #
+#   Utilise                                                    #
 #   ht_param_fixe.rda                                          #
 #   ht_param_cov.rda                                           #
 #   ht_param_random.rda                                        #
@@ -16,31 +15,34 @@
 ################################################################
 
 
-#' Generating parameters of the total tree height model from Auger (2016)
+#' Génère les paramètres pour estimer la hauteur totale d'un arbre avec l'équation de Auger (2016)
 #'
-#' @description Generate parameters of the tree height model from Auger (2016), deterministic or stochastic, for each tree of each plot and for all iterations
+#' @description Génère les paramètres pour estimer la hauteur totale d'un arbre avec l'équation de Auger (2016).
+#' Les paramètres peuvent être générés de façon déterministe ou stochastique.
+#' Si le mode stochastique est utilisé, les paramètres seront générés pour tous les arbres/itétations/années.
 #'
 #' @details
-#' The model for estimating total tree height is a linear mixed model calibrated per species (Auger 2016).
-#' There is a random plot effect, correlated residual errors with CorCar1 correlation fonction, and a covariance matrix of fixed effects.
+#' L'équation pour estimer la hauteur totale a été étalonnée avec un modèle linéaire mixte, par essence (Auger 2016).
+#' Le modèle inclut un effet aléatoire de placette et une corrélation de type CorCar1 sur les erreurs résiduelles.
 #'
 #' Auger, I., 2016. Une nouvelle relation hauteur-diamètre tenant compte de l’influence de la station et
 #' du climat pour 27 essences commerciales du Québec. Gouvernement du Québec, ministère
 #' des Forêts, de la Faune et des Parcs, Direction de la recherche forestière. Note de recherche forestière no 146. 31 p.
 #'
-#' @param fic_arbres Dataframe containing a list of trees for which height must be estimated, at least tree ID (no_arbre) and plot Id (id_pe) must be present
-#' @param mode_simul Simulation mode (STO = stochastic, DET = deterministic), default "DET"
-#' @param nb_iter Number of iteration if stochastic mode (default 1), ignored if \code{mode_simul="DET"}
-#' @param nb_step Number of time steps for which we need height estimation for the same tree (default 1), ignored if \code{mode_simul="DET"}
-#' @param dt Lenght of time step if nb_step>1 (default 10), ignored if \code{mode_simul="DET"}
-#' @param seed_value Optionnal parameter to set the seed value for random number generation. Usually used for testing for reproductibility
+#' @param fic_arbres Une table contenant la liste d'arbres dont la hauteur est à estimer. La table doit contenir les variables \code{no_arbre} (l'identifiant de l'arbre) et \code{id_pe} (l'identifiant de la placette).
+#' @param mode_simul Le mode de simulation (STO = stochastique, DET = déterministe), par défaut "DET".
+#' @param nb_iter Le nombre d'itérations si le mode stochastique est utilisé, doit être > 1. Ignoré si \code{mode_simul="DET"},
+#' @param nb_step Le nombre d'années pour lesquelles on veut estimer la hauteur pour un même arbre (par défaut 1), ignoré si \code{mode_simul="DET"}.
+#' @param dt La durée de l'intervalle de temps entre deux mesures d'un même arbre si \code{nb_step>1} (par défaut 10), ignoré si \code{mode_simul="DET"}.
+#' @param seed_value Optionnel. La valeur du seed pour la génération de nombres aléatoires. Généralement utilisé pour les tests de la fonction.
 #'
-#' @return A list of lists, one list per species for which there is a tree height model, and for each species, a list with 4 elements:
+#' @return La fonction retourne une liste de listes, soit une liste par essence pour laquelle il y a une équation de hauteur.
+#' Pour une essence, la liste contient 4 éléments:
 #' \enumerate{
-#'   \item essence: string with species code name
-#'   \item effet_fixe: dataframe of fixed effect parameter values (one line per iteration)
-#'   \item random_placette: dataframe of random plot effect values (one line per plot per iteration)
-#'   \item erreur_residuelle: dataframe of residual error values (one line per tree per iteration per time step)
+#'   \item essence: le code de l'essence
+#'   \item effet_fixe: une table avec une colonne pour chacun des paramètres des effets fixes de l'équation et une ligne par iteration. Une seule ligne si \code{mode_simul="DET"}.
+#'   \item random_placette: une table avec 4 colonnes: effet aléatoire de placette, le numéro de l'itération, l'identifiant de la placette et le code de l'essence. Une ligne par placette/itération. 0 si \code{mode_simul="DET"}.
+#'   \item erreur_residuelle: une table avec 6 colonnes:  erreur résiduelle, identifiant de la placette, identifiant de l'arbre, numéro de step, numéro de l'itération et le code de l'essence. Une ligne par arbre/placette/itération/step. 0 si \code{mode_simul="DET"}.
 #' }
 #' @export
 #'
@@ -48,18 +50,23 @@
 #' # Mode déterministe
 #' parametre_ht_dhp <- param_ht(fic_arbres=fic_arbres_test)
 #'
-#' # Mode stochastique, pour un seul pas de simulation et 10 itérations
+#' # Mode stochastique, pour une seule année et 10 itérations
 #' parametre_ht_dhp <- param_ht(fic_arbres=fic_arbres_test, mode_simul='STO', nb_iter=10)
 #'
-#' # Mode stochastique, plusieurs pas de simulation et plusieurs itérations
+#' # Mode stochastique, plusieurs années et plusieurs itérations
 #' parametre_ht_dhp <- param_ht(fic_arbres=fic_arbres_test, mode_simul='STO', nb_iter=10, nb_step=5)
 #'
-param_ht <- function(fic_arbres, nb_iter=1, mode_simul='DET', nb_step=1, dt=10, seed_value=NULL){
+param_ht <- function(fic_arbres, mode_simul='DET', nb_iter=1, nb_step=1, dt=10, seed_value=NULL){
+
+  if (mode_simul=='STO'){
+    if (nb_iter==1) {stop("Le nombre d'itérations doit être plus grand que 1 en mode stochastique")}
+  }
 
   if (length(seed_value)>0) {set.seed(seed_value)}
 
   #print("debut param_ht()")
-  #fic_arbres=fic_arbres; nb_iter=10; mode_simul='STO'; nb_step=1; dt=10;
+  #fic_arbres=fic_arbres_test; nb_iter=10; mode_simul='STO'; nb_step=1; dt=10;
+  #fic_arbres=data_arbre; mode_simul='STO'; nb_iter = 1; nb_step = 4; seed_value = 20;
 
   # liste des arbres
   liste_arbre <- fic_arbres %>% dplyr::select(id_pe, no_arbre) %>% unique()
@@ -87,11 +94,17 @@ param_ht <- function(fic_arbres, nb_iter=1, mode_simul='DET', nb_step=1, dt=10, 
 
       # générer une série de paramètres d'effets fixes, une par itération par essence, qui sera utilisée pour tous les arbres de cette essence de toutes les placettes
       # il faut donc autant de séries qu'il y a d'itérations, les itérations sont en lignes, les effets fixes en colonne
-      param_ht = as.data.frame(matrix(mvrnorm(n = nb_iter,
-                                              mu = as.matrix(param2_tr),
-                                              Sigma = as.matrix(covparam)
+      # pour que mvrnorm() fonctionne avec empirical=T, il faut au moins autant de n que la longueur du vecteur mu à simuler
+      mu = as.matrix(param2_tr)
+      l_mu = length(mu)
+      if (nb_iter<l_mu) {nb_iter_temp=l_mu}
+      else{nb_iter_temp=nb_iter}
+      param_ht = as.data.frame(matrix(mvrnorm(n = nb_iter_temp,
+                                              mu = mu,
+                                              Sigma = as.matrix(covparam),
+                                              empirical = T
                                               ),
-                                      nrow=nb_iter))
+                                      nrow=nb_iter_temp))[1:nb_iter,]
       #print(param_ht)
       names(param_ht) <- names(param2_tr)
       param_ht <- param_ht %>%
@@ -103,8 +116,9 @@ param_ht <- function(fic_arbres, nb_iter=1, mode_simul='DET', nb_step=1, dt=10, 
 
       # générer un effet aléatoire de placette qui va s'appliquer sur le paramètre associé à ldhp2, le même pour tous les arbres de la placette
       # il faut donc autant d'effet aléatoire qu'il y a de placettes x nb_iter
-      std <- sqrt(rand_ht[rand_ht$CovParm=='ldhp2' & rand_ht$Subject=="placette", 1])
-      if (length(std$estimate)>0) { random_ldhp2 = as.data.frame(rnorm(nb_iter*length(liste_place), mean=0, sd = as.matrix(std))) }
+      std2 <- rand_ht[rand_ht$CovParm=='ldhp2' & rand_ht$Subject=="placette", 1]
+      #if (length(std$estimate)>0) { random_ldhp2 = as.data.frame(rnorm(nb_iter*length(liste_place), mean=0, sd = as.matrix(std))) }
+      if (length(std2$estimate)>0) { random_ldhp2 = as.data.frame(mvrnorm(n=nb_iter*length(liste_place), mu=0, Sigma = as.matrix(std2), empirical = T)) }
       else{random_ldhp2 = as.data.frame(rep(0, nb_iter*length(liste_place)))} # le SAB n'a pas d'effet aléatoire
       #print(random_ldhp2)
       names(random_ldhp2) <- 'random_ldhp2'
@@ -119,11 +133,17 @@ param_ht <- function(fic_arbres, nb_iter=1, mode_simul='DET', nb_step=1, dt=10, 
       varcov = expand.grid(i=1:nb_step, j=1:nb_step)
       varcov = matrix(f(varcov$i, varcov$j, std_res, rho, dt), nrow=nb_step)
       n_arbre=length(liste_arbre$no_arbre)
-      res_arbre = as.data.frame(matrix(mvrnorm(n=nb_iter*n_arbre, mu=rep(0,nb_step), Sigma = varcov), nrow=nb_iter*n_arbre))
+      mu = rep(0,nb_step)
+      l_mu = length(mu)
+      if (nb_iter<l_mu) {nb_iter_temp=l_mu}
+      else{nb_iter_temp=nb_iter}
+      res_arbre = as.data.frame(matrix(mvrnorm(n=nb_iter_temp*n_arbre, mu=mu, Sigma = varcov, empirical=T), nrow=nb_iter_temp*n_arbre))
+      if (nb_step>1){res_arbre=res_arbre[1:(nb_iter*n_arbre),]}
+
       res_arbre = as.data.frame(bind_cols(data_arbre,res_arbre))
       # transposer les erreurs res pour avoir les time step en ligne
       res_arbre <- res_arbre %>%
-        group_by(iter,id_pe) %>%
+        group_by(iter,id_pe, no_arbre) %>%
         pivot_longer(cols=contains('V'), names_to = "step", values_to = 'res_arbre') %>%
         mutate(step=as.numeric(substr(step,2,2))) %>%
         ungroup()

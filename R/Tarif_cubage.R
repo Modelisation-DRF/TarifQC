@@ -160,7 +160,7 @@ arbre_vol3 <- arbre_vol2c %>%
     cylindre = (pi * dhpcm*dhpcm * hauteur_pred)/40,
     ht_dhp = hauteur_pred/dhpcm,
     vol_dm3 = b1*ht_dhp + (b2+b3*dres*dhpcm)*cylindre + random_plot + resid,
-    vol_dm3 = ifelse(vol_dm3<0, 4, vol_dm3)) %>% # 4 dm3 est le plus petit vol obs dans les données de calibration
+    vol_dm3 = ifelse(vol_dm3<4, 4, vol_dm3)) %>% # 4 dm3 est le plus petit vol obs dans les données de calibration
   dplyr::select(-cylindre, -ht_dhp, -essence_volume, -b1,-b2,-b3, -random_plot, -resid, -dres)
 # ça donne des NA pour tous les NC (il y a certain NC qui avait une hauteur, comme le PRP, mais n'ont pas de volume, ok)
 

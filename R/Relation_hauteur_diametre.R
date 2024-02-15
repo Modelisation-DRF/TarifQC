@@ -20,20 +20,20 @@
 
 #' Estime la hauteur totale de chacun des arbres avec l'équation de Auger (2016).
 #'
-#' @description Estime la hauteur totale en mètre de chacun des arbres avec l'équation de Auger (2016). La fonction permet l'estimation pour une liste d'arbres regroupés en placette à une année donnée.
+#' @description Estime la hauteur totale en mètre de chacun des arbres avec l'équation de Auger (2016). La fonction permet l'estimation pour une liste d'arbres regroupés en placette.
 #' L'estimation peut être déterministe ou stochastique.
 #'
 #' @details
 #' L'équation pour estimer la hauteur totale a été étalonnée avec un modèle linéaire mixte, par essence (Auger 2016).
 #' Le modèle inclut un effet aléatoire de placette et une corrélation de type CorCar1 sur les erreurs résiduelles.
-#' La fonction estime la hauteur de façon déterministe ou stochastique. Si l'estimation est stochastique, elle est pour une itération et une année données, la liste d'arbres fournie doit donc être pour une itération donnée et une année donnée.
-#' Si \code{mode_simul}='STO', les paramètres doivent être générés préalablement avec la fonction \code{param_ht}. Voir les exemples.
+#' La fonction estime la hauteur de façon déterministe ou stochastique. Si \code{mode_simul}='STO', les paramètres doivent être générés préalablement avec la fonction \code{param_ht}.
+#' Voir les exemples.
 #'
 #' Auger, I., 2016. Une nouvelle relation hauteur-diamètre tenant compte de l’influence de la station et
 #' du climat pour 27 essences commerciales du Québec. Gouvernement du Québec, ministère
 #' des Forêts, de la Faune et des Parcs, Direction de la recherche forestière. Note de recherche forestière no 146. 31 p.
 #'
-#' @param fic_arbres Une table contenant la liste d'arbres regroupés en placettes (pour une itération et une année données) avec les informations suivantes:
+#' @param fic_arbres Une table contenant la liste d'arbres regroupés au minimum en placettes avec les informations suivantes:
 #' \itemize{
 #'    \item id_pe: identifiant unique de la placette
 #'    \item dhpcm: dhp (cm) de l'arbre ou classe de dhp (>9 cm)
@@ -47,14 +47,17 @@
 #'    \item t_ma: température annuelle moyenne sur la période 1980-2010 (Celcius)
 #'    \item altitude: altitude (m)
 #'    \item reg_eco: Optionnel. Code de la région écologique. Vous pouvez fournir la région au lieu du sous-domaine, alors mettre le paramètre \code{reg_eco=TRUE}
+#'    \item iter: numéro de l'itération, seulement si mode stochastique, doit être numéroté de 1 à nb_iter
+#'    \item step: numéro de la step, seulement si mode stochastique, doit être numéroté de 1 à nb_step. Obligatoire même si le fichier n'est qu'une liste d'arbres à un moment donné.
 #' }
 #' @param mode_simul Mode de simulation : STO = stochastistique, DET = déterministe), par défaut "DET"
-#' @param iteration Si \code{mode_simul}='STO', le numéro de l'itération à estimer (par défaut 1).
-#' @param step Si \code{mode_simul}='STO', le numéro de l'année à estimer (par défaut 1, 1 à nb_step)
-#' @param parametre_ht Si \code{mode_simul}='STO', l'objet retourné par la fonction \code{param_ht} contenant les paramètres pour le modèle de hauteur (pour toutes les itérations et steps).
 #' @param grouping_vars Optionel. Si \code{mode_simul}='DET', les colonnes à ajouter comme variables de groupement, en plus de id_pe, pour calculer la surface terrière d'une placette.
 #' Par exemple, si le fichier des arbres contient plus d'une année par arbre, ajouter le colonne identifiant l'année comme variable de groupement: grouping_vars='var1'.
-#' S'il y a plusieurs variables de groupement: grouping_vars=c('var1','var2'). Ne peut pas être utilisé si \code{mode_simul}='STO'. Dans ce cas, créer un nouvel identifiant de la placette id_pe en concaténant toutes les variables de groupement.
+#' S'il y a plusieurs variables de groupement: grouping_vars=c('var1','var2').
+#' @param nb_iter Le nombre d'itérations si le mode stochastique est utilisé, doit être > 1. Ignoré si \code{mode_simul="DET"},
+#' @param nb_step Le nombre d'années pour lesquelles on veut estimer la hauteur pour un même arbre (par défaut 1), ignoré si \code{mode_simul="DET"}.
+#' @param dt La durée de l'intervalle de temps entre deux mesures d'un même arbre si \code{nb_step>1} (par défaut 10), ignoré si \code{mode_simul="DET"}.
+#' @param seed_value Optionnel. La valeur du seed pour la génération de nombres aléatoires. Généralement utilisé pour les tests de la fonction.
 #' @param reg_eco Optionel. Mettre à \code{TRUE} si reg_eco est fourni dans \code{fic_arbres} au lieu de sdom_bio. reg_eco sera converti en sdom_bio. La colonne sdom_bio ne doit pas être dans \code{fic_arbres}.
 #'
 #' @return La table \code{fic_arbres} avec une colonne contenant la hauteur estimée en mètres (hauteur_pred).
@@ -67,73 +70,30 @@
 #' # Exemple 2: DETERMINISTE: avec grouping_vars, plusieurs années par arbre ----------------
 #' DataHt <- relation_h_d(fic_arbres=fic_artemis_det, grouping_vars='annee')
 #'
-#' # Exemple 3: STOCHASTIQUE: une seule année par arbre ---------------------------------------
-#' # Générer les paramètres pour plusieurs itérations
-#' parametre_ht <- param_ht(fic_arbres=fic_arbres_test, mode_simul='STO', nb_iter=10)
-#' # Estimer la hauteur pour l'itération 2
-#' DataHt <- relation_h_d(fic_arbres=fic_arbres_test, mode_simul='STO', iteration=2, parametre_ht=parametre_ht)
+#' # Exemple 3: STOCHASTIQUE: plusieurs années par arbre ------------------------------------
+#' nb_iter <- length(unique(fic_artemis_sto$iter))
+#' nb_step <- length(unique(fic_artemis_sto$step))
+#' DataHt <- relation_h_d(fic_arbres=fic_artemis_sto, mode_simul='STO', nb_iter=nb_iter, nb_step=nb_step)
 #'
-#' # Exemple 4: STOCHASTIQUE: plusieurs années par arbre ------------------------------------
-#' # Générer les paramètres pour plusieurs itérations et années
-#' parametre_ht <- param_ht(fic_arbres=fic_artemis_sto, mode_simul='STO', nb_iter=10, nb_step=5)
-#' # Estimer la hauteur pour l'itération 2 et la step 3, où le 3 inclut la step 0, donc si la simulation aux pas de 10 ans a commencé en 2023, on veut l'estimation pour l'année 2043
-#' DataHt <- relation_h_d(fic_arbres=fic_artemis_sto[fic_artemis_sto$iter==2 & fic_artemis_sto$annee==2023+((3-1)*10),], mode_simul='STO', iteration=2, step=3, parametre_ht=parametre_ht)
-#'
-#' # Exemple 5: STOCHASTIQUE: estimer toutes les itérations et toutes les années  ---------------------------
-#' # Générer les paramètres du modèle de hauteur pour toutes les itérations et années
-#' nb_iter <- length(unique(fic_artemis_sto$iter)) # 10
-#' nb_step <- length(unique(fic_artemis_sto$annee)) # 5 (4 décennies + le point de départ en 2023)
-#' parametre_ht <- param_ht(fic_arbres=fic_artemis_sto, mode_simul='STO', nb_iter=nb_iter, nb_step=nb_step)
-#' # Appliquer le modèle de hauteur à chaque iteration/année
-#' fic_artemis_final1 <- NULL
-#' for (i in 1:nb_iter){
-#'   for (k in 1:nb_step){
-#'       ht <- relation_h_d(fic_arbres=fic_artemis_sto[fic_artemis_sto$iter==i & fic_artemis_sto$annee==2023+((k-1)*10),], mode_simul='STO', iteration=i, step=k, parametre_ht=parametre_ht)
-#'       fic_artemis_final1 <- bind_rows(fic_artemis_final1, ht)
-#'       }
-#'    }
-#'
-#' # On peut aussi paralléliser les deux boucles for
-#' nb_iter <- length(unique(fic_artemis_sto$iter)) # 10
-#' nb_step <- length(unique(fic_artemis_sto$annee)) # 5 # 5 (4 décennies + le point de départ en 2023)
-#' parametre_ht <- param_ht(fic_arbres=fic_artemis_sto, mode_simul='STO', nb_iter=nb_iter, nb_step=nb_step)
-#' # Appliquer le modèle de hauteur à chaque iteration/step
-#' registerDoFuture()
-#' plan(multisession)
-#' fic_artemis_final2 <- bind_rows(
-#'   foreach (i = 1:nb_iter) %:% # nesting operator
-#'       foreach (k = 1:nb_step) %dopar% {
-#'             fic <- relation_h_d(fic_arbres=fic_artemis_sto[fic_artemis_sto$iter==i & fic_artemis_sto$annee==2023+((k-1)*10),], mode_simul='STO', iteration=i, step=k, parametre_ht=parametre_ht)
-#'             }
-#'  )
-#'
-relation_h_d<-function (fic_arbres, mode_simul="DET", iteration=1, step=1,  parametre_ht=NULL, grouping_vars=NULL, reg_eco=FALSE) {
+relation_h_d<-function (fic_arbres, mode_simul="DET", nb_iter=1, nb_step=1, dt=10, seed_value=NULL, grouping_vars=NULL, reg_eco=FALSE) {
 
-  #fic_arbres=fic_arbres_test; mode_simul='STO'; iteration=1; step=1; parametre_ht=parametre_ht;
-  #fic_arbres=fic_arbres_test; mode_simul='DET'; parametre_ht=parametre_ht; iteration=1; step=1; parametre_ht=NULL; grouping_vars=NULL;
-  #fic_arbres=data_arbre[data_arbre$no_mes==2,]; mode_simul = "STO"; iteration = 1; step = 2; parametre_ht=parametre_ht;grouping_vars=NULL;
+  #fic_arbres=fic_artemis_sto; mode_simul='STO'; nb_iter=10; nb_step=5; dt=10;
+  #fic_arbres=fic_arbres_test; mode_simul='DET'; grouping_vars=NULL; nb_iter=1; nb_step=1; dt=10;
+  #fic_arbres=data_arbre; mode_simul='DET'; grouping_vars=NULL; nb_iter=1; nb_step=1; dt=10;
 
-# le parametre grouping_vars ne peut etre utilisé avec le mode stochastique
-if (mode_simul=='STO'){
-  if (length(grouping_vars)>0) { stop("grouping_vars ne peut pas être utilisé avec mode_simul=STO")}
-}
 
-ii <- iteration
-k <- step
-grouping_vars <- c('id_pe', grouping_vars)
+  # le parametre grouping_vars ne peut pas etre utilisé avec le mode stochastique
+  # en mode stochastique, les variables iter et step sont obligatoires
+  if (mode_simul=='STO'){
+    if (length(grouping_vars)>0) { stop("grouping_vars ne peut pas être utilisé avec mode_simul=STO")}
+    if (length(setdiff(c("iter","step"), names(fic_arbres))) >0) { stop("les colonnes iter et step doivent être dans fic_arbres avec mode_simul=STO")}
+  }
 
-# si mode déterministe et que parametre_ht est vide, générer les paramètres
-if (mode_simul=='DET' & length(parametre_ht)==0){
-  parametre_ht <- param_ht(fic_arbres=fic_arbres, mode_simul='DET')
-}
+  if (mode_simul=='STO'){ grouping_vars <- c('id_pe', "iter", "step")}
+  if (mode_simul=='DET'){ grouping_vars <- c('id_pe', grouping_vars)}
 
-# fichier de paramètres de toutes les essences de l'itération i: les paramètres sont dans la liste de listes parametre_ht, une liste par essence, et pour chaque essence, une liste de 4 elements,
-# dont 1: essence, 2: effets fixes, 3: effet aléatoire de placette sur ldhp2, 4: erreur residuelle
-
-# effet fixes, une ligne par essence
-param_ht_tr <- bind_rows(lapply(ht_liste_ess, function(x) parametre_ht[[x]]$effet_fixe %>% filter(iter==ii) %>% dplyr::select(-iter)))
-# remplacer tous les NA par des 0
-param_ht_tr <-  param_ht_tr %>% replace(is.na(.), 0)
+# générer les paramètres de la relation h_d
+parametre_ht <- param_ht(fic_arbres=fic_arbres, mode_simul=mode_simul, nb_iter=nb_iter, nb_step=nb_step, dt=dt, seed_value=seed_value)
 
 # si reg_eco est fourni, faire l'association entre reg_eco et sdom_bio
 if (reg_eco==TRUE){
@@ -167,13 +127,10 @@ arbre2 <- inner_join(fic_arbres, compil, by = grouping_vars) %>%
                                                                                           ifelse(sdom_bio=='6O',"6OUEST",
                                                                                                  NA))))))))))))
 
-arbre2a <-arbre2 %>%
-  mutate(essenceBck=essence,
-         #essence=ifelse(is.na(essence)==TRUE,GrEspece,essence) # je dois enlever ça, ça n'a pas rapport, c'était quand le code était directement dans artemis
-         ) %>%
+# ajouter l'essence associée au modèle de hauteur
+arbre2a <- arbre2 %>%
   left_join(ht_ass_ess, by="essence") %>%
-  rename(Essence_ori = essenceBck) %>%
-  dplyr::select(-essence) %>%
+  rename(essence_orig = essence) %>%
   rename(essence=essence_hauteur)
 
 # association des classes des variables categoriques selon l'essence au fichier des arbres
@@ -183,24 +140,16 @@ arbre5 <- left_join(arbre4, ht_ass_sd, by = c("sdom_bio", "essence"))
 arbre6 <- left_join(arbre5, ht_ass_vp, by = c("veg_pot", "essence"))
 
 # merger le fichier des parametres au fichier des arbres
-arbre7 <- left_join(arbre6, param_ht_tr, by = "essence")
-
-if (mode_simul=='STO'){
-  # effet aléatoire: une ligne par placette
-  rand_ldhp2 <- bind_rows(lapply(ht_liste_ess, function(x) parametre_ht[[x]]$random_placette %>% filter(iter==ii) %>% dplyr::select(-iter))) # le fichier random_placette a autant de lignes que de placette x nb_iter dans le fichier arbre, donc random_ldhp2 aura 27 x nb_placette
-  # erreur résiduelle: une ligne par arbre
-  resid <- bind_rows(lapply(ht_liste_ess, function(x) parametre_ht[[x]]$erreur_residuelle %>% filter(iter==ii, step==k) %>% dplyr::select(-iter,-step))) # le fichier erreur_residuelle a autant de lignes que le nombre d'arbres dans le fichier arbre x nb_iter x nb_step, donc resid aura 27 x nb arbre
-  # merger le fichier des effets aléatoires de placette
-  arbre7a <- left_join(arbre7, rand_ldhp2, by = c("id_pe","essence"))
-  # merger le fichier des erreurs résiduelle arbres
-  arbre7b <- left_join(arbre7a, resid, by = c("id_pe","no_arbre","essence"))
+if (mode_simul=='DET') {
+  arbre7 <- left_join(arbre6, parametre_ht, by = c("essence")) # quelques secondes
 }
-else{
-  arbre7b <- arbre7 %>% mutate(res_arbre=0, random_ldhp2=0)
+if (mode_simul=='STO') {
+  arbre7 <- left_join(arbre6, parametre_ht, by = c("id_pe", "no_arbre", "essence", "iter", "step")) # quelques secondes
+  # ici le merge ne fonctionne pas quand les variables du peuplement sont dans les deux fichiers
 }
 
 # appliquer l'equation
-arbre8 <- arbre7b %>%
+arbre8 <- arbre7 %>%
   ungroup() %>%
   mutate(eq_ldhp = ef_ldhp * logdhp,
          eq_alt = ef_alt * altitude * logdhp,
@@ -272,7 +221,7 @@ arbre8 <- arbre7b %>%
   mutate(hauteur_pred = ifelse(!is.na(essence) & dhpcm>9, 1.3 + res_arbre + eq_ldhp + eq_alt + eq_ptot + eq_tmoy + eq_st + eq_rdhp + eq_pert + eq_sdom + eq_mil + eq_vp + eq_ldhp2, NA),
          hauteur_pred = ifelse(hauteur_pred<1.3, 1.3, hauteur_pred)) %>%
   dplyr::select(-res_arbre, -random_ldhp2, -dens, -dhp_moy, -contains("sd_"), -contains("pert_"), -contains("mil_"), -contains("vp_"), -contains("ef_"), -contains("eq_"), -logdhp, -rdhp, -sum_st_ha, -pert, -milieu, -vp, -sdom, -essence, -cl_perturb, -sdom_bio) %>%
-  rename(essence=Essence_ori, milieu=type_eco4, sdom_bio=sdom_orig)
+  rename(essence=essence_orig, milieu=type_eco4, sdom_bio=sdom_orig)
 
 return(arbre8)
 }

@@ -27,18 +27,17 @@
 #' les forêts québécoises : une approche pour mieux évaluer l’incertitude associée aux prévisions.
 #' For. Chron. 83: 754-765.
 #'
-#' @param fic_arbres Une table contenant la liste d'arbres dont le volume est à estimer. La table doit contenir les variables \code{no_arbre} (l'identifiant de l'arbre) et \code{id_pe} (l'identifiant de la placette).
-#' @param mode_simul Le mode de simulation (STO = stochastiqie, DET = déterministe), par défaut "DET".
+#' @param fic_arbres Une table contenant la liste d'arbres dont le volume est à estimer. La table doit contenir les variables \code{no_arbre} (l'identifiant de l'arbre) et \code{id_pe} (l'identifiant de la placette) et \code(essence) (le code d'essence). Si mode stochastique, la table doit aussi contenir les colonnes step et iter. Si pas de step, créer une colonne avec step=1.
+#' @param mode_simul Le mode de simulation (STO = stochastique, DET = déterministe), par défaut "DET".
 #' @param nb_iter Le nombre d'itérations si le mode stochastique est utilisé, doit être > 1. Ignoré si \code{mode_simul="DET"}.
 #' @param nb_step Le nombre d'années pour lesquelles on veut estimer le volume pour un même arbre (par défaut 1), ignoré si \code{mode_simul="DET"}.
 #' @param seed_value La valeur du seed pour la génération de nombres aléatoires. Généralement utilisé pour les tests de la fonction. Optionnel.
 #'
-#' @return La fonction retourne une liste de listes, soit une liste par itération. Pour une itération, la liste contient 3 éléments:
+#' @return La fonction retourne une liste de deux éléments: une table pour les effets fixes et une pour l'erreur résiduelle et l'effet aléaoire de placette
 #'
 #' \enumerate{
-#'   \item effet_fixe : une table avec 5 colonnes: 3 pour les paramètres des effets fixes de l'équation, numéro de l'itération et essence. Une ligne par essence.
-#'   \item random_placette: une table avec 3 colonnes: effet aléatoire de placette, le numéro de l'itération et l'identifiant de la placette. Une ligne par placette/itération/step. 0 si \code{mode_simul="DET"}.
-#'   \item erreur_residuelle : une table avec l'erreur résiduelle associée à chaque essence (une colonne par essence), identifiant de la placette, identifiant de l'arbre, et numéro de l'itération. Une ligne par arbre/placette/itération. 0 si \code{mode_simul="DET"}.
+#'   \item effet_fixe : une table avec 5 colonnes: 3 pour les paramètres des effets fixes de l'équation (b1, b2, b3), iter (numéro de l'itération) et essence (essence du modèle de volume). Une ligne par essence/iter.
+#'   \item random: une table avec 31 colonnes: iter (numéro de l'itération), id_pe (identifiant de la placette), step (numéro de la step), random_plot (effet aléatoire de placette, 0 si mode déterministe) et une colonne pour chacune des 26 essences du modèle de volume contenant l'erreur résiduelle associée à cette essence, resid=0 si mode déterministe. Une ligne par placette/itération/step. 0 si \code{mode_simul="DET"}.
 #' }
 #' @export
 #'
@@ -46,35 +45,41 @@
 #' # Mode déterministe
 #' parametre_vol <- param_vol(fic_arbres=fic_arbres_test)
 #'
-#' # Mode stochastique, pour une seule année et 10 itérations
-#' parametre_vol <- param_vol(fic_arbres=fic_arbres_test, mode_simul='STO', nb_iter=10)
-#'
 #'#' # Mode stochastique, plusieurs années et 10 itérations
-#' parametre_vol <- param_vol(fic_arbres=fic_arbres_test, mode_simul='STO', nb_iter=10, nb_step=3)
+#' parametre_vol <- param_vol(fic_arbres=fic_artemis_sto, mode_simul='STO', nb_iter=10, nb_step=5)
 #'
 param_vol <- function(fic_arbres, mode_simul="DET", nb_iter=1, nb_step=1, seed_value=NULL){
+
+  #fic_arbres=fic_artemis_sto; mode_simul='STO'; nb_iter=10; nb_step=5;
 
   if (mode_simul=='STO'){
     if (nb_iter==1) {stop("Le nombre d'itérations doit être plus grand que 1 en mode stochastique")}
   }
 
-  #fic_arbres=fic_arbres_test; mode_simul='STO'; nb_iter=10; nb_step=1;
-
+  # ne garder que les variables nécessaires si stochastique
+  if (mode_simul=='STO'){
+    fic_arbres <- fic_arbres %>% dplyr::select(id_pe, no_arbre, essence, iter, step) # si sto, on a besoin de iter et step
+  }
 
   if (length(seed_value)>0) {set.seed(seed_value)}
 
-  # liste des arbres
-  liste_arbre <- fic_arbres %>% dplyr::select(id_pe, no_arbre) %>% unique()
 
-  # générer la liste de placettes
-  liste_place <- unique(liste_arbre$id_pe)
-
-  # lecture des paramètres des effets fixes (tarif_param_fixe.rda)
-  param_tarif <- tarif_param_fixe
+  # établir la liste des essences pour lesquelles on a besoin du modele de volume
+  fic_arbres_temp <- fic_arbres %>% left_join(tarif_ass_ess, by="essence")
+  fic_arbres_temp2 <- fic_arbres_temp %>% rename(essence_orig=essence) %>% rename(essence=essence_volume)
+  liste_ess_vol <- fic_arbres_temp2 %>% filter(!is.na(essence)) %>% dplyr::select(essence)
+  liste_ess_vol <- unique(liste_ess_vol$essence)
 
   if (mode_simul=='STO') {
+
+    # liste des arbres
+    liste_arbre <- fic_arbres %>% dplyr::select(id_pe, no_arbre) %>% unique()
+
+    # générer la liste de placettes
+    liste_place <- unique(liste_arbre$id_pe)
+
     # Transposition des paramètres pour avoir une seule ligne
-    param_tarif_tr <- param_tarif %>% pivot_wider(names_from = beta_ess, values_from = Estimate)
+    param_tarif_tr <- tarif_param_fixe %>% pivot_wider(names_from = beta_ess, values_from = Estimate)
 
     # générer les effets fixes avec la matrice de covariances des effets fixes (tarif_param_cov.rda)
     # pour que mvrnorm() fonctionne avec empirical=T, il faut au moins autant de n que la longueur du vecteur mu à simuler
@@ -91,9 +96,9 @@ param_vol <- function(fic_arbres, mode_simul="DET", nb_iter=1, nb_step=1, seed_v
     param_vol_tr <- param_vol %>%
       group_by(iter) %>%
       pivot_longer(cols=b1:b3_TIL, names_to = "parameter", values_to = "estimate") %>%
-      separate_wider_delim(col=parameter, names=c("parm","essence_volume"), delim='_', too_few = "align_start") %>%
-      filter(!is.na(essence_volume)) %>%
-      group_by(iter, essence_volume) %>%
+      separate_wider_delim(col=parameter, names=c("parm","essence"), delim='_', too_few = "align_start") %>%
+      filter(!is.na(essence)) %>%
+      group_by(iter, essence) %>%
       pivot_wider(names_from = parm, values_from = estimate) %>%
       left_join(param_vol[,c('iter','b1')], by='iter') %>%
       ungroup()
@@ -117,11 +122,11 @@ param_vol <- function(fic_arbres, mode_simul="DET", nb_iter=1, nb_step=1, seed_v
     l_mu = length(mu)
     if (nb_iter<l_mu) {nb_iter_temp=l_mu}
     else{nb_iter_temp=nb_iter}
-    random_plot = as.data.frame(matrix(mvrnorm(nb_iter_temp*length(liste_place), mu=mu, Sigma = sig, empirical=T), nrow=nb_iter_temp*length(liste_place)))
-    if (nb_step>1){random_plot=random_plot[1:(nb_iter*length(liste_place)),]}
-    random_plot = bind_cols(data_plot,random_plot)
+    rand = as.data.frame(matrix(mvrnorm(nb_iter_temp*length(liste_place), mu=mu, Sigma = sig, empirical=T), nrow=nb_iter_temp*length(liste_place)))
+    if (nb_step>1){random_plot=rand[1:(nb_iter*length(liste_place)),]}
+    rand = bind_cols(data_plot,rand)
     # transposer les effets aléatoires pour avoir les step en ligne
-    random_plot <- random_plot %>%
+    rand <- rand %>%
       group_by(iter,id_pe) %>%
       pivot_longer(cols=contains('V'), names_to = "step", values_to = 'random_plot') %>%
       mutate(step=as.numeric(substr(step,2,2))) %>%
@@ -154,29 +159,37 @@ param_vol <- function(fic_arbres, mode_simul="DET", nb_iter=1, nb_step=1, seed_v
       if (is.null(res_tous)) {res_tous = res}
       else{res_tous <- left_join(res_tous, res, by=c('iter','id_pe','no_arbre','step'))}
     }
-    # res_tous <- bind_cols(data_arbre,res_tous)
-    # l'erreur résiduelle à choisir est celle de la colonne correspondant à l'essence de l'arbre
+   # l'erreur résiduelle à choisir est celle de la colonne correspondant à l'essence de l'arbre
 
-    list_result <- list()
-    for (i in 1:nb_iter) {
-      list_result[[i]] <- list('effet_fixe'=param_vol_tr[param_vol_tr$iter==i,], 'random_placette'=random_plot[random_plot$iter==i,], 'erreur_residuelle'=res_tous[res_tous$iter==i,])
-    }
+
+    # param_vol_tr : une ligne par iter/essence dans le modèle de vol donc 26 x nb_iter
+    # rand:      une ligne par placette/iter/step
+    # res_tous:  une ligne par placette/iter/step/arbre
+
+    # merger random_plot et erreur residuelle
+    param0 <- left_join(rand, res_tous, by=c('id_pe','iter','step'))
+    # je ne peux pas y merger les effets fixe, le by ne peut pas fonctionner
+
   }
   else{ # si déterministe
-    param_vol_tr <- param_tarif %>%
-      separate_wider_delim(col=beta_ess, names=c("parm","essence_volume"), delim='_', too_few = "align_start") %>%
-      filter(!is.na(essence_volume)) %>%
-      group_by(essence_volume) %>%
+    param_vol_tr <- tarif_param_fixe %>%
+      separate_wider_delim(col=beta_ess, names=c("parm","essence"), delim='_', too_few = "align_start") %>%
+      filter(!is.na(essence)) %>%
+      group_by(essence) %>%
       pivot_wider(names_from = parm, values_from = Estimate) %>%
-      mutate(b1 = param_tarif[param_tarif$beta_ess=='b1',2], iter=1) %>%
+      mutate(b1 = tarif_param_fixe[tarif_param_fixe$beta_ess=='b1',2],
+             #iter=1,
+             random_plot=0,
+             resid=0) %>%
       ungroup()
 
-    random_plot <- 0
-    res_tous <- 0
+    param0 <- NULL
 
-    list_result <- list()
-    list_result[[1]] <- list('effet_fixe'=param_vol_tr, 'random_placette'=random_plot, 'erreur_residuelle'=res_tous)
   }
-  #return(list('effet_fixe'=param_vol_tr, 'random_placette'=random_plot, 'erreur_residuelle'=res_tous))
-  return(list_result)
+
+  # ne garder que les essences de fic_arbres
+  param_vol_tr <- param_vol_tr[param_vol_tr$essence %in% liste_ess_vol,]
+
+  return(list('effet_fixe'=param_vol_tr, 'random'=param0))
+
 }

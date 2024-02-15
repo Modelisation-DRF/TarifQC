@@ -7,15 +7,16 @@
 relation_h_d(
   fic_arbres,
   mode_simul = "DET",
-  iteration = 1,
-  step = 1,
-  parametre_ht = NULL,
+  nb_iter = 1,
+  nb_step = 1,
+  dt = 10,
+  seed_value = NULL,
   grouping_vars = NULL,
   reg_eco = FALSE
 )
 }
 \arguments{
-\item{fic_arbres}{Une table contenant la liste d'arbres regroupés en placettes (pour une itération et une année données) avec les informations suivantes:
+\item{fic_arbres}{Une table contenant la liste d'arbres regroupés au minimum en placettes avec les informations suivantes:
 \itemize{
    \item id_pe: identifiant unique de la placette
    \item dhpcm: dhp (cm) de l'arbre ou classe de dhp (>9 cm)
@@ -29,19 +30,23 @@ relation_h_d(
    \item t_ma: température annuelle moyenne sur la période 1980-2010 (Celcius)
    \item altitude: altitude (m)
    \item reg_eco: Optionnel. Code de la région écologique. Vous pouvez fournir la région au lieu du sous-domaine, alors mettre le paramètre \code{reg_eco=TRUE}
+   \item iter: numéro de l'itération, seulement si mode stochastique, doit être numéroté de 1 à nb_iter
+   \item step: numéro de la step, seulement si mode stochastique, doit être numéroté de 1 à nb_step. Obligatoire même si le fichier n'est qu'une liste d'arbres à un moment donné.
 }}
 
 \item{mode_simul}{Mode de simulation : STO = stochastistique, DET = déterministe), par défaut "DET"}
 
-\item{iteration}{Si \code{mode_simul}='STO', le numéro de l'itération à estimer (par défaut 1).}
+\item{nb_iter}{Le nombre d'itérations si le mode stochastique est utilisé, doit être > 1. Ignoré si \code{mode_simul="DET"},}
 
-\item{step}{Si \code{mode_simul}='STO', le numéro de l'année à estimer (par défaut 1, 1 à nb_step)}
+\item{nb_step}{Le nombre d'années pour lesquelles on veut estimer la hauteur pour un même arbre (par défaut 1), ignoré si \code{mode_simul="DET"}.}
 
-\item{parametre_ht}{Si \code{mode_simul}='STO', l'objet retourné par la fonction \code{param_ht} contenant les paramètres pour le modèle de hauteur (pour toutes les itérations et steps).}
+\item{dt}{La durée de l'intervalle de temps entre deux mesures d'un même arbre si \code{nb_step>1} (par défaut 10), ignoré si \code{mode_simul="DET"}.}
+
+\item{seed_value}{Optionnel. La valeur du seed pour la génération de nombres aléatoires. Généralement utilisé pour les tests de la fonction.}
 
 \item{grouping_vars}{Optionel. Si \code{mode_simul}='DET', les colonnes à ajouter comme variables de groupement, en plus de id_pe, pour calculer la surface terrière d'une placette.
 Par exemple, si le fichier des arbres contient plus d'une année par arbre, ajouter le colonne identifiant l'année comme variable de groupement: grouping_vars='var1'.
-S'il y a plusieurs variables de groupement: grouping_vars=c('var1','var2'). Ne peut pas être utilisé si \code{mode_simul}='STO'. Dans ce cas, créer un nouvel identifiant de la placette id_pe en concaténant toutes les variables de groupement.}
+S'il y a plusieurs variables de groupement: grouping_vars=c('var1','var2').}
 
 \item{reg_eco}{Optionel. Mettre à \code{TRUE} si reg_eco est fourni dans \code{fic_arbres} au lieu de sdom_bio. reg_eco sera converti en sdom_bio. La colonne sdom_bio ne doit pas être dans \code{fic_arbres}.}
 }
@@ -49,14 +54,14 @@ S'il y a plusieurs variables de groupement: grouping_vars=c('var1','var2'). Ne p
 La table \code{fic_arbres} avec une colonne contenant la hauteur estimée en mètres (hauteur_pred).
 }
 \description{
-Estime la hauteur totale en mètre de chacun des arbres avec l'équation de Auger (2016). La fonction permet l'estimation pour une liste d'arbres regroupés en placette à une année donnée.
+Estime la hauteur totale en mètre de chacun des arbres avec l'équation de Auger (2016). La fonction permet l'estimation pour une liste d'arbres regroupés en placette.
 L'estimation peut être déterministe ou stochastique.
 }
 \details{
 L'équation pour estimer la hauteur totale a été étalonnée avec un modèle linéaire mixte, par essence (Auger 2016).
 Le modèle inclut un effet aléatoire de placette et une corrélation de type CorCar1 sur les erreurs résiduelles.
-La fonction estime la hauteur de façon déterministe ou stochastique. Si l'estimation est stochastique, elle est pour une itération et une année données, la liste d'arbres fournie doit donc être pour une itération donnée et une année donnée.
-Si \code{mode_simul}='STO', les paramètres doivent être générés préalablement avec la fonction \code{param_ht}. Voir les exemples.
+La fonction estime la hauteur de façon déterministe ou stochastique. Si \code{mode_simul}='STO', les paramètres doivent être générés préalablement avec la fonction \code{param_ht}.
+Voir les exemples.
 
 Auger, I., 2016. Une nouvelle relation hauteur-diamètre tenant compte de l’influence de la station et
 du climat pour 27 essences commerciales du Québec. Gouvernement du Québec, ministère
@@ -69,44 +74,9 @@ DataHt <- relation_h_d(fic_arbres=fic_arbres_test)
 # Exemple 2: DETERMINISTE: avec grouping_vars, plusieurs années par arbre ----------------
 DataHt <- relation_h_d(fic_arbres=fic_artemis_det, grouping_vars='annee')
 
-# Exemple 3: STOCHASTIQUE: une seule année par arbre ---------------------------------------
-# Générer les paramètres pour plusieurs itérations
-parametre_ht <- param_ht(fic_arbres=fic_arbres_test, mode_simul='STO', nb_iter=10)
-# Estimer la hauteur pour l'itération 2
-DataHt <- relation_h_d(fic_arbres=fic_arbres_test, mode_simul='STO', iteration=2, parametre_ht=parametre_ht)
-
-# Exemple 4: STOCHASTIQUE: plusieurs années par arbre ------------------------------------
-# Générer les paramètres pour plusieurs itérations et années
-parametre_ht <- param_ht(fic_arbres=fic_artemis_sto, mode_simul='STO', nb_iter=10, nb_step=5)
-# Estimer la hauteur pour l'itération 2 et la step 3, où le 3 inclut la step 0, donc si la simulation aux pas de 10 ans a commencé en 2023, on veut l'estimation pour l'année 2043
-DataHt <- relation_h_d(fic_arbres=fic_artemis_sto[fic_artemis_sto$iter==2 & fic_artemis_sto$annee==2023+((3-1)*10),], mode_simul='STO', iteration=2, step=3, parametre_ht=parametre_ht)
-
-# Exemple 5: STOCHASTIQUE: estimer toutes les itérations et toutes les années  ---------------------------
-# Générer les paramètres du modèle de hauteur pour toutes les itérations et années
-nb_iter <- length(unique(fic_artemis_sto$iter)) # 10
-nb_step <- length(unique(fic_artemis_sto$annee)) # 5 (4 décennies + le point de départ en 2023)
-parametre_ht <- param_ht(fic_arbres=fic_artemis_sto, mode_simul='STO', nb_iter=nb_iter, nb_step=nb_step)
-# Appliquer le modèle de hauteur à chaque iteration/année
-fic_artemis_final1 <- NULL
-for (i in 1:nb_iter){
-  for (k in 1:nb_step){
-      ht <- relation_h_d(fic_arbres=fic_artemis_sto[fic_artemis_sto$iter==i & fic_artemis_sto$annee==2023+((k-1)*10),], mode_simul='STO', iteration=i, step=k, parametre_ht=parametre_ht)
-      fic_artemis_final1 <- bind_rows(fic_artemis_final1, ht)
-      }
-   }
-
-# On peut aussi paralléliser les deux boucles for
-nb_iter <- length(unique(fic_artemis_sto$iter)) # 10
-nb_step <- length(unique(fic_artemis_sto$annee)) # 5 # 5 (4 décennies + le point de départ en 2023)
-parametre_ht <- param_ht(fic_arbres=fic_artemis_sto, mode_simul='STO', nb_iter=nb_iter, nb_step=nb_step)
-# Appliquer le modèle de hauteur à chaque iteration/step
-registerDoFuture()
-plan(multisession)
-fic_artemis_final2 <- bind_rows(
-  foreach (i = 1:nb_iter) \%:\% # nesting operator
-      foreach (k = 1:nb_step) \%dopar\% {
-            fic <- relation_h_d(fic_arbres=fic_artemis_sto[fic_artemis_sto$iter==i & fic_artemis_sto$annee==2023+((k-1)*10),], mode_simul='STO', iteration=i, step=k, parametre_ht=parametre_ht)
-            }
- )
+# Exemple 3: STOCHASTIQUE: plusieurs années par arbre ------------------------------------
+nb_iter <- length(unique(fic_artemis_sto$iter))
+nb_step <- length(unique(fic_artemis_sto$step))
+DataHt <- relation_h_d(fic_arbres=fic_artemis_sto, mode_simul='STO', nb_iter=nb_iter, nb_step=nb_step)
 
 }

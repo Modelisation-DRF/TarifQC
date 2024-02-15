@@ -81,17 +81,35 @@ data_arbre_vol_attendu <- cubage(fic_arbres=data_arbre_vol, mode_simul='DET', pa
 saveRDS(data_arbre_vol_attendu, "tests/testthat/fixtures/data_arbre_vol_attendu.rds")
 
 
+# fichier arbres pour tests stochastiques
+data_arbre_a <- data_arbre %>% filter(id_pe==1, essence %in% liste_ess) %>% mutate(step=1, no_arbre=row_number())
+data_arbre_b <- data_arbre %>% filter(id_pe==1, essence %in% liste_ess) %>% mutate(step=2, no_arbre=row_number())
+data_arbre_c <- data_arbre %>% filter(id_pe==1, essence %in% liste_ess) %>% mutate(step=3, no_arbre=row_number())
+data_arbre_d <- data_arbre %>% filter(id_pe==1, essence %in% liste_ess) %>% mutate(step=4, no_arbre=row_number())
+data_arbre_e <- data_arbre %>% filter(id_pe==1, essence %in% liste_ess) %>% mutate(step=5, no_arbre=row_number())
+data_arbre0 <- bind_rows(data_arbre_a,data_arbre_b,data_arbre_c, data_arbre_d, data_arbre_e)
+
+data_arbre2 <- do.call(rbind, replicate(200, data_arbre0, simplify = FALSE))
+data_arbre3 <- data_arbre2 %>%
+  group_by(id_pe, no_arbre, step) %>%
+  mutate(iter = row_number()) %>%
+  ungroup()
+
+data_arbre_sto <- data_arbre3
+saveRDS(data_arbre_sto, "tests/testthat/fixtures/data_arbre_sto.rds")
+
 # fichier de ht attendu en mode stochastique, en fixant le seed à 20
-parametre_ht_attendu_sto <- param_ht(fic_arbres=data_arbre, mode_simul = 'STO', nb_iter = 2, seed_value = 20)
-data_arbre_attendu_sto <- relation_h_d(fic_arbres=data_arbre, parametre_ht=parametre_ht_attendu_sto, mode_simul = 'STO', iteration=1)
+data_arbre_attendu_sto <- relation_h_d(fic_arbres=data_arbre_sto, mode_simul = "STO", nb_iter = 200, nb_step = 5, seed_value = 20)
 saveRDS(data_arbre_attendu_sto, "tests/testthat/fixtures/data_arbre_attendu_sto.rds")
-saveRDS(parametre_ht_attendu_sto, "tests/testthat/fixtures/parametre_ht_attendu_sto.rds")
+
+
+# fichier de ht attendu en mode stochastique avec une seule step, en fixant le seed à 20
+data_arbre_attendu_sto1 <- relation_h_d(fic_arbres=data_arbre_sto[data_arbre_sto$step==1,], mode_simul = "STO", nb_iter = 200, nb_step = 1, seed_value = 20)
+saveRDS(data_arbre_attendu_sto1, "tests/testthat/fixtures/data_arbre_attendu_sto1.rds")
+
 
 
 # fichier attendu pour le volume en mode stochastique
-# une seule ligne par essence est suffisant
-param_vol_attendu_sto <- param_vol(fic_arbres=data_arbre_vol, mode_simul = 'STO', nb_iter = 2, seed_value=20)
-saveRDS(param_vol_attendu_sto, "tests/testthat/fixtures/param_vol_attendu_sto.rds")
-data_arbre_vol_attendu_sto <- cubage(fic_arbres=data_arbre_vol, mode_simul='STO', iteration=1, parametre_vol=param_vol_attendu_sto)
+data_arbre_vol_attendu_sto <- cubage(fic_arbres=data_arbre_attendu_sto, mode_simul='STO', nb_iter=200, nb_step=5, seed_value = 20)
 saveRDS(data_arbre_vol_attendu_sto, "tests/testthat/fixtures/data_arbre_vol_attendu_sto.rds")
 

@@ -13,9 +13,9 @@ param_vol(
 )
 }
 \arguments{
-\item{fic_arbres}{Une table contenant la liste d'arbres dont le volume est à estimer. La table doit contenir les variables \code{no_arbre} (l'identifiant de l'arbre) et \code{id_pe} (l'identifiant de la placette).}
+\item{fic_arbres}{Une table contenant la liste d'arbres dont le volume est à estimer. La table doit contenir les variables \code{no_arbre} (l'identifiant de l'arbre) et \code{id_pe} (l'identifiant de la placette) et \code(essence) (le code d'essence). Si mode stochastique, la table doit aussi contenir les colonnes step et iter. Si pas de step, créer une colonne avec step=1.}
 
-\item{mode_simul}{Le mode de simulation (STO = stochastiqie, DET = déterministe), par défaut "DET".}
+\item{mode_simul}{Le mode de simulation (STO = stochastique, DET = déterministe), par défaut "DET".}
 
 \item{nb_iter}{Le nombre d'itérations si le mode stochastique est utilisé, doit être > 1. Ignoré si \code{mode_simul="DET"}.}
 
@@ -24,12 +24,11 @@ param_vol(
 \item{seed_value}{La valeur du seed pour la génération de nombres aléatoires. Généralement utilisé pour les tests de la fonction. Optionnel.}
 }
 \value{
-La fonction retourne une liste de listes, soit une liste par itération. Pour une itération, la liste contient 3 éléments:
+La fonction retourne une liste de deux éléments: une table pour les effets fixes et une pour l'erreur résiduelle et l'effet aléaoire de placette
 
 \enumerate{
-  \item effet_fixe : une table avec 5 colonnes: 3 pour les paramètres des effets fixes de l'équation, numéro de l'itération et essence. Une ligne par essence.
-  \item random_placette: une table avec 3 colonnes: effet aléatoire de placette, le numéro de l'itération et l'identifiant de la placette. Une ligne par placette/itération/step. 0 si \code{mode_simul="DET"}.
-  \item erreur_residuelle : une table avec l'erreur résiduelle associée à chaque essence (une colonne par essence), identifiant de la placette, identifiant de l'arbre, et numéro de l'itération. Une ligne par arbre/placette/itération. 0 si \code{mode_simul="DET"}.
+  \item effet_fixe : une table avec 5 colonnes: 3 pour les paramètres des effets fixes de l'équation (b1, b2, b3), iter (numéro de l'itération) et essence (essence du modèle de volume). Une ligne par essence/iter.
+  \item random: une table avec 31 colonnes: iter (numéro de l'itération), id_pe (identifiant de la placette), step (numéro de la step), random_plot (effet aléatoire de placette, 0 si mode déterministe) et une colonne pour chacune des 26 essences du modèle de volume contenant l'erreur résiduelle associée à cette essence, resid=0 si mode déterministe. Une ligne par placette/itération/step. 0 si \code{mode_simul="DET"}.
 }
 }
 \description{
@@ -49,10 +48,7 @@ For. Chron. 83: 754-765.
 # Mode déterministe
 parametre_vol <- param_vol(fic_arbres=fic_arbres_test)
 
-# Mode stochastique, pour une seule année et 10 itérations
-parametre_vol <- param_vol(fic_arbres=fic_arbres_test, mode_simul='STO', nb_iter=10)
-
 #' # Mode stochastique, plusieurs années et 10 itérations
-parametre_vol <- param_vol(fic_arbres=fic_arbres_test, mode_simul='STO', nb_iter=10, nb_step=3)
+parametre_vol <- param_vol(fic_arbres=fic_artemis_sto, mode_simul='STO', nb_iter=10, nb_step=5)
 
 }

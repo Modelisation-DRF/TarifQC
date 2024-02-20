@@ -153,6 +153,18 @@ test_that("relation_h_d() avec reg_eco fonctionne", {
   expect_equal(round(DataHt$hauteur_pred,2), round(9.237575,2))
 })
 
+
+
+test_that("relation_h_d() avec un fichier de samare estime les bonnes hauteurs", {
+  data_simul_samare <- readRDS(test_path("fixtures", "data_simul_samare.rds"))
+  data_simul_samare_attendu <- readRDS(test_path("fixtures", "data_simul_samare_attendu.rds"))
+  nb_iter <- max(data_simul_samare$iter)
+  nb_step <- max(data_simul_samare$step)
+  data_simul_samare_obtenu <- relation_h_d(fic_arbres = data_simul_samare, mode_simul = 'STO', nb_iter = nb_iter, nb_step = nb_step, reg_eco = T, dt=5, seed_value = 20)
+  expect_equal(data_simul_samare_obtenu$hauteur_pred, data_simul_samare_attendu$hauteur_pred)
+})
+
+
 # tester un fichier avec quelques arbres avec une ht fournie et d'autres à estimer: NON, la fonction va toujours estimer la hauteur de tous les arbres du fichier, ça sera à l'utilisateur ensuite de remplacer les ht_pred par les hauteur mesurées au besoin
 
 # tester si le nombre d'itérations est le même dans le fichier des arbres que dans le fichier des paramètres:

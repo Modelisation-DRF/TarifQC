@@ -51,6 +51,7 @@
 param_vol <- function(fic_arbres, mode_simul="DET", nb_iter=1, nb_step=1, seed_value=NULL){
 
   #fic_arbres=fic_artemis_sto; mode_simul='STO'; nb_iter=10; nb_step=5;
+ # fic_arbres=fic_arbres; mode_simul=mode_simul; nb_iter=nb_iter; nb_step=nb_step; seed_value=seed_value;
 
   if (mode_simul=='STO'){
     if (nb_iter==1) {stop("Le nombre d'itérations doit être plus grand que 1 en mode stochastique")}
@@ -85,8 +86,7 @@ param_vol <- function(fic_arbres, mode_simul="DET", nb_iter=1, nb_step=1, seed_v
     # pour que mvrnorm() fonctionne avec empirical=T, il faut au moins autant de n que la longueur du vecteur mu à simuler
     mu = as.matrix(param_tarif_tr)
     l_mu = length(mu)
-    if (nb_iter<l_mu) {nb_iter_temp=l_mu}
-    else{nb_iter_temp=nb_iter}
+    if (nb_iter<l_mu) {nb_iter_temp=l_mu} else {nb_iter_temp=nb_iter}
     param_vol = as.data.frame(matrix(mvrnorm(n = nb_iter_temp, mu = mu, Sigma = as.matrix(tarif_param_cov), empirical = T),
                                      nrow=nb_iter_temp))[1:nb_iter,]
     names(param_vol) <- names(param_tarif_tr)
@@ -120,10 +120,9 @@ param_vol <- function(fic_arbres, mode_simul="DET", nb_iter=1, nb_step=1, seed_v
     sig = diag(tarif_param_random[1,4], nrow=nb_step)
     mu=rep(0,nb_step)
     l_mu = length(mu)
-    if (nb_iter<l_mu) {nb_iter_temp=l_mu}
-    else{nb_iter_temp=nb_iter}
+    if (nb_iter<l_mu) {nb_iter_temp=l_mu} else {nb_iter_temp=nb_iter}
     rand = as.data.frame(matrix(mvrnorm(nb_iter_temp*length(liste_place), mu=mu, Sigma = sig, empirical=T), nrow=nb_iter_temp*length(liste_place)))
-    if (nb_step>1){random_plot=rand[1:(nb_iter*length(liste_place)),]}
+    if (nb_step>1) {rand <- rand[1:(nb_iter*length(liste_place)),]}
     rand = bind_cols(data_plot,rand)
     # transposer les effets aléatoires pour avoir les step en ligne
     rand <- rand %>%

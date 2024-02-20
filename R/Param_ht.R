@@ -64,6 +64,7 @@ param_ht <- function(fic_arbres, mode_simul='DET', nb_iter=1, nb_step=1, dt=10, 
   # fic_arbres=data_arbre3; mode_simul='STO'; nb_iter=20000; nb_step=5; seed_value=20;
   # fic_arbres=fic_artemis_sto; mode_simul='STO'; nb_iter=10; nb_step=5; seed_value=20; dt=10;
   # fic_arbres=data_arbre; mode_simul='DET'; nb_iter=1; nb_step=1; dt=10;
+  # fic_arbres = fic_arbres; mode_simul = mode_simul; nb_iter = nb_iter; nb_step = nb_step; dt = dt; seed_value = seed_value;
 
   # ne garder que les variables nécessaires si stochastique
   if (mode_simul=='STO'){
@@ -95,7 +96,7 @@ param_ht <- function(fic_arbres, mode_simul='DET', nb_iter=1, nb_step=1, dt=10, 
   if (mode_simul=='STO') {
 
     # liste des arbres
-    liste_arbre <- fic_arbres %>% dplyr::select(id_pe, no_arbre, essence) %>% unique() %>% rename(ess_arbre=essence)
+    liste_arbre <- fic_arbres_temp2 %>% dplyr::select(id_pe, no_arbre, essence_hauteur) %>% unique() %>% rename(ess_arbre=essence_hauteur) # ici il faut la liste des essences du modèles de hauteur rencontrées dans le fichier, pas l'essence original de l'arbre
     # liste des placettes
     liste_place <- unique(fic_arbres$id_pe)
 
@@ -109,9 +110,12 @@ param_ht <- function(fic_arbres, mode_simul='DET', nb_iter=1, nb_step=1, dt=10, 
     f <- function(i, j, std_res, rho, dt) { var_res * rho^(abs(j-i)*dt) } # correlation sp(pow)
 
   # faire une essence à la fois et les mettre dans des listes: une liste de listes
+    #BOJ ERS FEN HEG
+    # "ERS" "HEG" "TIL" "BOJ"
   tous <- list()
   for (ess in ht_liste_ess_complet) {
-    #ess='TIL'
+
+    # ess="TIL"
 
       # lecture des effets fixes pour l'essence
       param2_tr <- ht_param_fixe[[ess]] %>% dplyr::select(-essence)
@@ -125,8 +129,7 @@ param_ht <- function(fic_arbres, mode_simul='DET', nb_iter=1, nb_step=1, dt=10, 
       # pour que mvrnorm() fonctionne avec empirical=T, il faut au moins autant de n que la longueur du vecteur mu à simuler
       mu = as.matrix(param2_tr)
       l_mu = length(mu)
-      if (nb_iter<l_mu) {nb_iter_temp=l_mu}
-      else{nb_iter_temp=nb_iter}
+      if (nb_iter<l_mu) {nb_iter_temp=l_mu} else {nb_iter_temp=nb_iter}
       param_ht = as.data.frame(matrix(mvrnorm(n = nb_iter_temp,
                                               mu = mu,
                                               Sigma = as.matrix(covparam),
@@ -147,8 +150,7 @@ param_ht <- function(fic_arbres, mode_simul='DET', nb_iter=1, nb_step=1, dt=10, 
       std2 <- rand_ht[rand_ht$CovParm=='ldhp2' & rand_ht$Subject=="placette", 1]
       # générer l'effet aléatoire de placettes seulement pour les placettes où l'ess est présente
       place_ess <- unique(data_arbre %>% filter(ess_arbre==ess) %>% dplyr::select(id_pe))
-      if (length(std2$estimate)>0) { random_ldhp2 = as.data.frame(mvrnorm(n=nb_iter*nrow(place_ess), mu=0, Sigma = as.matrix(std2), empirical = T)) }
-      else{random_ldhp2 = as.data.frame(rep(0, nb_iter*nrow(place_ess)))} # le SAB n'a pas d'effet aléatoire
+      if (length(std2$estimate)>0) { random_ldhp2 = as.data.frame(mvrnorm(n=nb_iter*nrow(place_ess), mu=0, Sigma = as.matrix(std2), empirical = T)) } else {random_ldhp2 = as.data.frame(rep(0, nb_iter*nrow(place_ess)))} # le SAB n'a pas d'effet aléatoire
       names(random_ldhp2) <- 'random_ldhp2'
       data_plot2 <- inner_join(data_plot,place_ess, by="id_pe")
       rand_plot = bind_cols(data_plot2,random_ldhp2) %>% mutate(essence=ess)
@@ -162,8 +164,7 @@ param_ht <- function(fic_arbres, mode_simul='DET', nb_iter=1, nb_step=1, dt=10, 
       n_arbre=length(liste_arbre$no_arbre)
       mu = rep(0,nb_step)
       l_mu = length(mu)
-      if (nb_iter<l_mu) {nb_iter_temp=l_mu}
-      else{nb_iter_temp=nb_iter}
+      if (nb_iter<l_mu) {nb_iter_temp=l_mu} else {nb_iter_temp=nb_iter}
       # pour l'essence ess, sélectionner seulement les arbres de cette ess
       nombre_arbre_ess <- nrow(data_arbre %>% filter(ess_arbre==ess, iter==1))
       residu = as.data.frame(matrix(mvrnorm(n=nb_iter_temp*nombre_arbre_ess, mu=mu, Sigma = varcov, empirical=T), nrow=nb_iter_temp*nombre_arbre_ess))
@@ -183,12 +184,15 @@ param_ht <- function(fic_arbres, mode_simul='DET', nb_iter=1, nb_step=1, dt=10, 
       residu$essence <- ess
       #var_empirique <- residu %>% filter(step==1) %>% summarise(vres=var(res_arbre)) # ok ici
       }
-      else{
+      if (!(ess %in% ht_liste_ess_temp))
+      {
         rand_plot <- NULL
         residu <- NULL
       }
     temp <- list('essence'=ess, 'effet_fixe'=param_ht, 'random_placette'=rand_plot, 'erreur_residuelle'=residu)
     tous <- append(tous, list(temp))
+
+
   }
     names(tous) <- ht_liste_ess_complet
 
@@ -197,9 +201,12 @@ param_ht <- function(fic_arbres, mode_simul='DET', nb_iter=1, nb_step=1, dt=10, 
   # Faire des tables avec toutes les essences
 
   # effets fixes, une ligne par essence/iter (essence du modele de ht présentes dans le fic_arbres)
-  param_ht_tr <- bind_rows(lapply(ht_liste_ess_temp, function(x) tous[[x]]$effet_fixe))
+  # il faut faire lapply sur toutes les essences, même si pas dans le fichier, car sinon il va manquaer des paramètres pour appliquer l'équation sans tenir compte de l'essence
+  param_ht_tr <- bind_rows(lapply(ht_liste_ess_complet, function(x) tous[[x]]$effet_fixe))
   # remplacer tous les NA par des 0
   param_ht_tr <-  param_ht_tr %>% replace(is.na(.), 0)
+  # ensuite on peut sélectionner seulem,ent les essences présentes dans le fichier des arbres
+  param_ht_tr <- param_ht_tr[param_ht_tr$essence %in% ht_liste_ess_temp,]
 
   # effet aléatoire: une ligne par placette/essence/iter: toutes les placettes auront toutes les essences du modele de ht présentes dans le fic_arbres
   rand <- bind_rows(lapply(ht_liste_ess_temp, function(x) tous[[x]]$random_placette)) # le fichier random_placette a autant de lignes que de placette x nb_iter dans le fichier arbre, donc random_ldhp2 aura 27 x nb_placette

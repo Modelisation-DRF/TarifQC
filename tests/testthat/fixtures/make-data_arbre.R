@@ -113,3 +113,13 @@ saveRDS(data_arbre_attendu_sto1, "tests/testthat/fixtures/data_arbre_attendu_sto
 data_arbre_vol_attendu_sto <- cubage(fic_arbres=data_arbre_attendu_sto, mode_simul='STO', nb_iter=200, nb_step=5, seed_value = 20)
 saveRDS(data_arbre_vol_attendu_sto, "tests/testthat/fixtures/data_arbre_vol_attendu_sto.rds")
 
+
+# fichier de samare avec des données qui ont souvant fait planté le code R
+data_simul_samare <- read_delim("tests/testthat/fixtures/SimulHtVol.csv", delim = ';') %>% mutate(milieu=substr(milieu,1,1))
+saveRDS(data_simul_samare, "tests/testthat/fixtures/data_simul_samare.rds")
+nb_iter <- max(data_simul_samare$iter)
+nb_step <- max(data_simul_samare$step)
+ht <- relation_h_d(fic_arbres = data_simul_samare, mode_simul = 'STO', nb_iter = nb_iter, nb_step = nb_step, reg_eco = T, dt=5, seed_value = 20)
+data_simul_samare_attendu <- cubage(fic_arbres=ht, mode_simul='STO', nb_iter=nb_iter, nb_step=nb_step, seed_value = 20)
+saveRDS(data_simul_samare_attendu, "tests/testthat/fixtures/data_simul_samare_attendu.rds")
+

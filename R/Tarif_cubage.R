@@ -68,6 +68,8 @@ cubage <- function (fic_arbres, mode_simul='DET', nb_iter=1, nb_step=1, seed_val
   # DataHt <- relation_h_d(fic_arbres=fic_artemis_sto, mode_simul='STO', nb_iter=10, nb_step=5)
   # fic_arbres=DataHt; mode_simul='STO'; nb_iter=10; nb_step=5;
 
+  # DataHt <- relation_h_d(fic_arbres=SimulHtVol1, mode_simul='STO', nb_iter=max(SimulHtVol1$iter), nb_step=max(SimulHtVol1$step), dt=5, reg_eco=T)
+ # fic_arbres=DataHt; mode_simul='STO'; nb_iter=max(SimulHtVol1$iter); nb_step=max(SimulHtVol1$step);
 
   # en mode stochastique, les variables iter et step sont obligatoires
   if (mode_simul=='STO'){

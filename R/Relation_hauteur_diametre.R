@@ -81,6 +81,7 @@ relation_h_d<-function (fic_arbres, mode_simul="DET", nb_iter=1, nb_step=1, dt=1
   #fic_arbres=fic_arbres_test; mode_simul='DET'; grouping_vars=NULL; nb_iter=1; nb_step=1; dt=10;
   #fic_arbres=data_arbre; mode_simul='DET'; grouping_vars=NULL; nb_iter=1; nb_step=1; dt=10;
   # fic_arbres = SimulHtVol1; mode_simul = 'STO'; nb_iter = nb_iter; nb_step = nb_step; reg_eco = T; dt=5; grouping_vars=NULL; seed_value=NULL;
+# fic_arbres = data_simul_samare; mode_simul = 'STO'; nb_iter = nb_iter; nb_step = nb_step; reg_eco = T; dt=5; seed_value = 20;
 
   # le parametre grouping_vars ne peut pas etre utilisé avec le mode stochastique
   # en mode stochastique, les variables iter et step sont obligatoires
@@ -95,16 +96,19 @@ relation_h_d<-function (fic_arbres, mode_simul="DET", nb_iter=1, nb_step=1, dt=1
 # générer les paramètres de la relation h_d
 parametre_ht <- param_ht(fic_arbres=fic_arbres, mode_simul=mode_simul, nb_iter=nb_iter, nb_step=nb_step, dt=dt, seed_value=seed_value)
 
+
+
 # si reg_eco est fourni, faire l'association entre reg_eco et sdom_bio
 if (reg_eco==TRUE){
   fic_arbres <- left_join(fic_arbres, regeco_ass_sdom[,c("reg_eco","sdom_bio")], by="reg_eco")
 }
 
 # compiler la st a la placette car on a besoin de sttot dans la relation h-d (avec les non commerciaux)
+# ajout de l'ptopn , na.rm = T pour calculer les moyenne par placette même s'il y a des dhpcm à NA dans la placette (comme dans le cas où on met des morts dans le fichier)
 compil <- fic_arbres %>%
   group_by_at(vars(all_of(grouping_vars))) %>%
-  summarise(sum_st_ha = sum(pi * (dhpcm/2/100)^2 * nb_tige * 25),
-            dens = sum(nb_tige*25),
+  summarise(sum_st_ha = sum(pi * (dhpcm/2/100)^2 * nb_tige * 25, na.rm = T),
+            dens = sum(nb_tige*25, na.rm = T),
             dhp_moy = sqrt((sum_st_ha*40000)/(dens*pi)))
 
 # ajouter la st au fichier des arbres et preparer les autres variables necessaires

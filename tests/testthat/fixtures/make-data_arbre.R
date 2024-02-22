@@ -121,5 +121,6 @@ nb_iter <- max(data_simul_samare$iter)
 nb_step <- max(data_simul_samare$step)
 ht <- relation_h_d(fic_arbres = data_simul_samare, mode_simul = 'STO', nb_iter = nb_iter, nb_step = nb_step, reg_eco = T, dt=5, seed_value = 20)
 data_simul_samare_attendu <- cubage(fic_arbres=ht, mode_simul='STO', nb_iter=nb_iter, nb_step=nb_step, seed_value = 20)
+# il y a des ht et vol à NA seulement pour les morts, car n'ont pas de dhp
 saveRDS(data_simul_samare_attendu, "tests/testthat/fixtures/data_simul_samare_attendu.rds")
 

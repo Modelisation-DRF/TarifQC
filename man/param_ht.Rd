@@ -14,7 +14,10 @@ param_ht(
 )
 }
 \arguments{
-\item{fic_arbres}{Une table contenant la liste d'arbres dont la hauteur est à estimer avec leur essence. La table doit contenir les variables \code{no_arbre} (l'identifiant de l'arbre) et \code{id_pe} (l'identifiant de la placette) et \code(essence) (le code d'essence). Si mode stochastique, la table doit aussi contenir les colonnes step et iter. Si pas de step, créer une colonne avec step=1}
+\item{fic_arbres}{Une table contenant la liste d'arbres dont la hauteur est à estimer avec leur essence.
+La table doit contenir les variables \code{no_arbre} (l'identifiant de l'arbre) et \code{id_pe} (l'identifiant de la placette)
+et \code{essence} (le code d'essence). Si mode stochastique, la table doit aussi contenir les colonnes step et iter.
+Si pas de step, créer une colonne avec step=1}
 
 \item{mode_simul}{Le mode de simulation (STO = stochastique, DET = déterministe), par défaut "DET".}
 

@@ -13,8 +13,6 @@
 #   ht_liste_ess.rda                                           #
 #                                                              #
 ################################################################
-
-
 #' Génère les paramètres pour estimer la hauteur totale de chacun des arbres regroupés en placettes, avec l'équation de Auger (2016)
 #'
 #' @description Génère les paramètres pour estimer la hauteur totale de chacun des arbres regroupés en placettes, avec l'équation de Auger (2016).
@@ -30,7 +28,10 @@
 #' du climat pour 27 essences commerciales du Québec. Gouvernement du Québec, ministère
 #' des Forêts, de la Faune et des Parcs, Direction de la recherche forestière. Note de recherche forestière no 146. 31 p.
 #'
-#' @param fic_arbres Une table contenant la liste d'arbres dont la hauteur est à estimer avec leur essence. La table doit contenir les variables \code{no_arbre} (l'identifiant de l'arbre) et \code{id_pe} (l'identifiant de la placette) et \code(essence) (le code d'essence). Si mode stochastique, la table doit aussi contenir les colonnes step et iter. Si pas de step, créer une colonne avec step=1
+#' @param fic_arbres Une table contenant la liste d'arbres dont la hauteur est à estimer avec leur essence.
+#' La table doit contenir les variables \code{no_arbre} (l'identifiant de l'arbre) et \code{id_pe} (l'identifiant de la placette)
+#' et \code{essence} (le code d'essence). Si mode stochastique, la table doit aussi contenir les colonnes step et iter.
+#' Si pas de step, créer une colonne avec step=1
 #' @param mode_simul Le mode de simulation (STO = stochastique, DET = déterministe), par défaut "DET".
 #' @param nb_iter Le nombre d'itérations si le mode stochastique est utilisé, doit être > 1. Ignoré si \code{mode_simul="DET"},
 #' @param nb_step Le nombre d'années pour lesquelles on veut estimer la hauteur pour un même arbre (par défaut 1), ignoré si \code{mode_simul="DET"}.

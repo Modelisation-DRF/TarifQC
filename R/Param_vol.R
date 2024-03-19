@@ -27,7 +27,9 @@
 #' les forêts québécoises : une approche pour mieux évaluer l’incertitude associée aux prévisions.
 #' For. Chron. 83: 754-765.
 #'
-#' @param fic_arbres Une table contenant la liste d'arbres dont le volume est à estimer. La table doit contenir les variables \code{no_arbre} (l'identifiant de l'arbre) et \code{id_pe} (l'identifiant de la placette) et \code(essence) (le code d'essence). Si mode stochastique, la table doit aussi contenir les colonnes step et iter. Si pas de step, créer une colonne avec step=1.
+#' @param fic_arbres Une table contenant la liste d'arbres dont le volume est à estimer. La table doit contenir les variables \code{no_arbre} (l'identifiant de l'arbre)
+#' et \code{id_pe} (l'identifiant de la placette) et \code{essence} (le code d'essence). Si mode stochastique, la table doit aussi contenir les colonnes step et iter.
+#'  Si pas de step, créer une colonne avec step=1.
 #' @param mode_simul Le mode de simulation (STO = stochastique, DET = déterministe), par défaut "DET".
 #' @param nb_iter Le nombre d'itérations si le mode stochastique est utilisé, doit être > 1. Ignoré si \code{mode_simul="DET"}.
 #' @param nb_step Le nombre d'années pour lesquelles on veut estimer le volume pour un même arbre (par défaut 1), ignoré si \code{mode_simul="DET"}.

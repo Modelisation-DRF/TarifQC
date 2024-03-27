@@ -61,10 +61,11 @@ Pour une description du data.frame
 
 ## Historique des versions
 
-| Date |  Version  | Features et bugs |      Détails     |
-|:-----|:---------:|:-----------------|:-----------------|
+| Date |  Version  | Issues |      Détails     |
+|:-----|:---------:|:-------|:-----------------|
 | 2024-03-26 | 1.1.3 |  | déplacer les packages de depends à imports dans DESCRIPTION, utiliser la fct mvrnorm de rockchalk au lieu de MASS |
 | 2024-02-22 | 1.1.2 |  | ajout de l'option na.rm=T dans le calcul de la st et densité de chaque placette |
 | 2024-02-20 | 1.1.1 |  | correction de bugs mineurs détectés en utilisant un fichier de samare avec peu d'essences |
-| 2024-02-08 | 1.1.0 | bugs | amélioration de la vitesse d'exécution en mode stochastique |
+| 2024-02-08 | 1.1.0 | issue #1  | amélioration de la vitesse d'exécution en mode stochastique |
+| 2023-11-30 | 1.0.0 | | première version stable |
 

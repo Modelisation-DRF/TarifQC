@@ -82,11 +82,11 @@ saveRDS(data_arbre_vol_attendu, "tests/testthat/fixtures/data_arbre_vol_attendu.
 
 
 # fichier arbres pour tests stochastiques
-data_arbre_a <- data_arbre %>% filter(id_pe==1, essence %in% liste_ess) %>% mutate(step=1, no_arbre=row_number())
-data_arbre_b <- data_arbre %>% filter(id_pe==1, essence %in% liste_ess) %>% mutate(step=2, no_arbre=row_number())
-data_arbre_c <- data_arbre %>% filter(id_pe==1, essence %in% liste_ess) %>% mutate(step=3, no_arbre=row_number())
-data_arbre_d <- data_arbre %>% filter(id_pe==1, essence %in% liste_ess) %>% mutate(step=4, no_arbre=row_number())
-data_arbre_e <- data_arbre %>% filter(id_pe==1, essence %in% liste_ess) %>% mutate(step=5, no_arbre=row_number())
+data_arbre_a <- data_arbre %>% filter(id_pe==1, essence %in% ht_liste_ess) %>% mutate(step=1, no_arbre=row_number()) # ht_liste_ess au lieu de liste_ess
+data_arbre_b <- data_arbre %>% filter(id_pe==1, essence %in% ht_liste_ess) %>% mutate(step=2, no_arbre=row_number())
+data_arbre_c <- data_arbre %>% filter(id_pe==1, essence %in% ht_liste_ess) %>% mutate(step=3, no_arbre=row_number())
+data_arbre_d <- data_arbre %>% filter(id_pe==1, essence %in% ht_liste_ess) %>% mutate(step=4, no_arbre=row_number())
+data_arbre_e <- data_arbre %>% filter(id_pe==1, essence %in% ht_liste_ess) %>% mutate(step=5, no_arbre=row_number())
 data_arbre0 <- bind_rows(data_arbre_a,data_arbre_b,data_arbre_c, data_arbre_d, data_arbre_e)
 
 data_arbre2 <- do.call(rbind, replicate(200, data_arbre0, simplify = FALSE))
@@ -95,23 +95,23 @@ data_arbre3 <- data_arbre2 %>%
   mutate(iter = row_number()) %>%
   ungroup()
 
-data_arbre_sto <- data_arbre3
-saveRDS(data_arbre_sto, "tests/testthat/fixtures/data_arbre_sto.rds")
+data_arbre_sto_2 <- data_arbre3
+saveRDS(data_arbre_sto_2, "tests/testthat/fixtures/data_arbre_sto_2.rds")
 
 # fichier de ht attendu en mode stochastique, en fixant le seed à 20
-data_arbre_attendu_sto <- relation_h_d(fic_arbres=data_arbre_sto, mode_simul = "STO", nb_iter = 200, nb_step = 5, seed_value = 20)
-saveRDS(data_arbre_attendu_sto, "tests/testthat/fixtures/data_arbre_attendu_sto.rds")
+data_arbre_attendu_sto_2 <- relation_h_d(fic_arbres=data_arbre_sto_2, mode_simul = "STO", nb_iter = 200, nb_step = 5, seed_value = 20)
+saveRDS(data_arbre_attendu_sto_2, "tests/testthat/fixtures/data_arbre_attendu_sto_2.rds")
 
 
 # fichier de ht attendu en mode stochastique avec une seule step, en fixant le seed à 20
-data_arbre_attendu_sto1 <- relation_h_d(fic_arbres=data_arbre_sto[data_arbre_sto$step==1,], mode_simul = "STO", nb_iter = 200, nb_step = 1, seed_value = 20)
-saveRDS(data_arbre_attendu_sto1, "tests/testthat/fixtures/data_arbre_attendu_sto1.rds")
+data_arbre_attendu_sto1_2 <- relation_h_d(fic_arbres=data_arbre_sto_2[data_arbre_sto_2$step==1,], mode_simul = "STO", nb_iter = 200, nb_step = 1, seed_value = 20)
+saveRDS(data_arbre_attendu_sto1_2, "tests/testthat/fixtures/data_arbre_attendu_sto1_2.rds")
 
 
 
 # fichier attendu pour le volume en mode stochastique
-data_arbre_vol_attendu_sto <- cubage(fic_arbres=data_arbre_attendu_sto, mode_simul='STO', nb_iter=200, nb_step=5, seed_value = 20)
-saveRDS(data_arbre_vol_attendu_sto, "tests/testthat/fixtures/data_arbre_vol_attendu_sto.rds")
+data_arbre_vol_attendu_sto_2 <- cubage(fic_arbres=data_arbre_attendu_sto_2, mode_simul='STO', nb_iter=200, nb_step=5, seed_value = 20)
+saveRDS(data_arbre_vol_attendu_sto_2, "tests/testthat/fixtures/data_arbre_vol_attendu_sto_2.rds")
 
 
 # fichier de samare avec des données qui ont souvant fait planté le code R
@@ -120,7 +120,7 @@ saveRDS(data_simul_samare, "tests/testthat/fixtures/data_simul_samare.rds")
 nb_iter <- max(data_simul_samare$iter)
 nb_step <- max(data_simul_samare$step)
 ht <- relation_h_d(fic_arbres = data_simul_samare, mode_simul = 'STO', nb_iter = nb_iter, nb_step = nb_step, reg_eco = T, dt=5, seed_value = 20)
-data_simul_samare_attendu <- cubage(fic_arbres=ht, mode_simul='STO', nb_iter=nb_iter, nb_step=nb_step, seed_value = 20)
+data_simul_samare_attendu_2 <- cubage(fic_arbres=ht, mode_simul='STO', nb_iter=nb_iter, nb_step=nb_step, seed_value = 20)
 # il y a des ht et vol à NA seulement pour les morts, car n'ont pas de dhp
-saveRDS(data_simul_samare_attendu, "tests/testthat/fixtures/data_simul_samare_attendu.rds")
+saveRDS(data_simul_samare_attendu_2, "tests/testthat/fixtures/data_simul_samare_attendu_2.rds")
 

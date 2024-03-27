@@ -48,7 +48,7 @@
 #'   \item random_ldhp2 effet aléatoire de placette pour l'essence/iter, 0 si mode déterministe
 #'   \item res_arbre: erreur_residuelle de l'arbre pour une iter/step, 0 si mode déterministe
 #' }
-#' @export
+# #' @export
 #'
 #' @examples
 #' # Mode déterministe
@@ -131,7 +131,7 @@ param_ht <- function(fic_arbres, mode_simul='DET', nb_iter=1, nb_step=1, dt=10, 
       mu = as.matrix(param2_tr)
       l_mu = length(mu)
       if (nb_iter<l_mu) {nb_iter_temp=l_mu} else {nb_iter_temp=nb_iter}
-      param_ht = as.data.frame(matrix(mvrnorm(n = nb_iter_temp,
+      param_ht = as.data.frame(matrix(rockchalk::mvrnorm(n = nb_iter_temp,
                                               mu = mu,
                                               Sigma = as.matrix(covparam),
                                               empirical = T
@@ -151,7 +151,7 @@ param_ht <- function(fic_arbres, mode_simul='DET', nb_iter=1, nb_step=1, dt=10, 
       std2 <- rand_ht[rand_ht$CovParm=='ldhp2' & rand_ht$Subject=="placette", 1]
       # générer l'effet aléatoire de placettes seulement pour les placettes où l'ess est présente
       place_ess <- unique(data_arbre %>% filter(ess_arbre==ess) %>% dplyr::select(id_pe))
-      if (length(std2$estimate)>0) { random_ldhp2 = as.data.frame(mvrnorm(n=nb_iter*nrow(place_ess), mu=0, Sigma = as.matrix(std2), empirical = T)) } else {random_ldhp2 = as.data.frame(rep(0, nb_iter*nrow(place_ess)))} # le SAB n'a pas d'effet aléatoire
+      if (length(std2$estimate)>0) { random_ldhp2 = as.data.frame(rockchalk::mvrnorm(n=nb_iter*nrow(place_ess), mu=0, Sigma = as.matrix(std2), empirical = T)) } else {random_ldhp2 = as.data.frame(rep(0, nb_iter*nrow(place_ess)))} # le SAB n'a pas d'effet aléatoire
       names(random_ldhp2) <- 'random_ldhp2'
       data_plot2 <- inner_join(data_plot,place_ess, by="id_pe")
       rand_plot = bind_cols(data_plot2,random_ldhp2) %>% mutate(essence=ess)
@@ -168,7 +168,7 @@ param_ht <- function(fic_arbres, mode_simul='DET', nb_iter=1, nb_step=1, dt=10, 
       if (nb_iter<l_mu) {nb_iter_temp=l_mu} else {nb_iter_temp=nb_iter}
       # pour l'essence ess, sélectionner seulement les arbres de cette ess
       nombre_arbre_ess <- nrow(data_arbre %>% filter(ess_arbre==ess, iter==1))
-      residu = as.data.frame(matrix(mvrnorm(n=nb_iter_temp*nombre_arbre_ess, mu=mu, Sigma = varcov, empirical=T), nrow=nb_iter_temp*nombre_arbre_ess))
+      residu = as.data.frame(matrix(rockchalk::mvrnorm(n=nb_iter_temp*nombre_arbre_ess, mu=mu, Sigma = varcov, empirical=T), nrow=nb_iter_temp*nombre_arbre_ess))
       #cov_empirique <- cov(residu) # c'est exactement la bonne matrice!
 
       if (nb_step>1){residu=residu[1:(nb_iter*nombre_arbre_ess),]}

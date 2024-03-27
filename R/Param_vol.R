@@ -41,7 +41,7 @@
 #'   \item effet_fixe : une table avec 5 colonnes: 3 pour les paramètres des effets fixes de l'équation (b1, b2, b3), iter (numéro de l'itération) et essence (essence du modèle de volume). Une ligne par essence/iter.
 #'   \item random: une table avec 31 colonnes: iter (numéro de l'itération), id_pe (identifiant de la placette), step (numéro de la step), random_plot (effet aléatoire de placette, 0 si mode déterministe) et une colonne pour chacune des 26 essences du modèle de volume contenant l'erreur résiduelle associée à cette essence, resid=0 si mode déterministe. Une ligne par placette/itération/step. 0 si \code{mode_simul="DET"}.
 #' }
-#' @export
+# #' @export
 #'
 #' @examples
 #' # Mode déterministe
@@ -89,7 +89,7 @@ param_vol <- function(fic_arbres, mode_simul="DET", nb_iter=1, nb_step=1, seed_v
     mu = as.matrix(param_tarif_tr)
     l_mu = length(mu)
     if (nb_iter<l_mu) {nb_iter_temp=l_mu} else {nb_iter_temp=nb_iter}
-    param_vol = as.data.frame(matrix(mvrnorm(n = nb_iter_temp, mu = mu, Sigma = as.matrix(tarif_param_cov), empirical = T),
+    param_vol = as.data.frame(matrix(rockchalk::mvrnorm(n = nb_iter_temp, mu = mu, Sigma = as.matrix(tarif_param_cov), empirical = T),
                                      nrow=nb_iter_temp))[1:nb_iter,]
     names(param_vol) <- names(param_tarif_tr)
     param_vol <- param_vol %>% mutate(iter = row_number())
@@ -123,7 +123,7 @@ param_vol <- function(fic_arbres, mode_simul="DET", nb_iter=1, nb_step=1, seed_v
     mu=rep(0,nb_step)
     l_mu = length(mu)
     if (nb_iter<l_mu) {nb_iter_temp=l_mu} else {nb_iter_temp=nb_iter}
-    rand = as.data.frame(matrix(mvrnorm(nb_iter_temp*length(liste_place), mu=mu, Sigma = sig, empirical=T), nrow=nb_iter_temp*length(liste_place)))
+    rand = as.data.frame(matrix(rockchalk::mvrnorm(nb_iter_temp*length(liste_place), mu=mu, Sigma = sig, empirical=T), nrow=nb_iter_temp*length(liste_place)))
     if (nb_step>1) {rand <- rand[1:(nb_iter*length(liste_place)),]}
     rand = bind_cols(data_plot,rand)
     # transposer les effets aléatoires pour avoir les step en ligne
@@ -146,7 +146,7 @@ param_vol <- function(fic_arbres, mode_simul="DET", nb_iter=1, nb_step=1, seed_v
       l_mu = length(mu)
       if (nb_iter<l_mu) {nb_iter_temp=l_mu}
       else{nb_iter_temp=nb_iter}
-      res = as.data.frame(matrix(mvrnorm(nb_iter_temp*length(liste_arbre$no_arbre), mu=mu, Sigma = sig, empirical = T), nrow=nb_iter_temp*length(liste_arbre$no_arbre)))
+      res = as.data.frame(matrix(rockchalk::mvrnorm(nb_iter_temp*length(liste_arbre$no_arbre), mu=mu, Sigma = sig, empirical = T), nrow=nb_iter_temp*length(liste_arbre$no_arbre)))
       if (nb_step>1){res=res[1:(nb_iter*length(liste_arbre$no_arbre)),]}
 
 

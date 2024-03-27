@@ -23,20 +23,20 @@ test_that("relation_h_d() avec param déterministe et utilisation du grouping_va
 # tester le stochastique quand il y plusieurs mesures par arbre
 test_that("relation_h_d() avec mode stochastique (seed=20) et nb_step=4 pour le meme arbre retourne la bonne hauteur pour la mesure 2", {
   data_arbre <- readRDS(test_path("fixtures", "data_arbre_sto.rds"))
-  data_arbre_attendu <- readRDS(test_path("fixtures", "data_arbre_attendu_sto.rds"))
+  data_arbre_attendu_sto_2 <- readRDS(test_path("fixtures", "data_arbre_attendu_sto_2.rds"))
 
   DataHt <- relation_h_d(fic_arbres=data_arbre, mode_simul = "STO", nb_iter = 200, nb_step = 5, seed=20)
 
-  expect_equal(DataHt, data_arbre_attendu)
+  expect_equal(DataHt, data_arbre_attendu_sto_2)
 })
 
 # tester le stochastique quand il n'y qu'une seule mesure par arbre
 test_that("relation_h_d() avec mode stochastique avec seed=20 estime les bonnes hauteurs", {
   data_arbre <- readRDS(test_path("fixtures", "data_arbre_sto.rds"))
   data_arbre <- data_arbre %>% filter(step==1)
-  data_arbre_attendu_sto1 <- readRDS(test_path("fixtures", "data_arbre_attendu_sto1.rds"))
+  data_arbre_attendu_sto1_2 <- readRDS(test_path("fixtures", "data_arbre_attendu_sto1_2.rds"))
   DataHt <- relation_h_d(fic_arbres=data_arbre, mode_simul = "STO", nb_iter = 200, nb_step=1, seed_value = 20)
-  expect_equal(DataHt, data_arbre_attendu_sto1)
+  expect_equal(DataHt, data_arbre_attendu_sto1_2)
 })
 
 
@@ -157,11 +157,13 @@ test_that("relation_h_d() avec reg_eco fonctionne", {
 
 test_that("relation_h_d() avec un fichier de samare estime les bonnes hauteurs", {
   data_simul_samare <- readRDS(test_path("fixtures", "data_simul_samare.rds"))
-  data_simul_samare_attendu <- readRDS(test_path("fixtures", "data_simul_samare_attendu.rds"))
+  data_simul_samare_attendu_2 <- readRDS(test_path("fixtures", "data_simul_samare_attendu_2.rds"))
   nb_iter <- max(data_simul_samare$iter)
   nb_step <- max(data_simul_samare$step)
   data_simul_samare_obtenu <- relation_h_d(fic_arbres = data_simul_samare, mode_simul = 'STO', nb_iter = nb_iter, nb_step = nb_step, reg_eco = T, dt=5, seed_value = 20)
-  expect_equal(data_simul_samare_obtenu$hauteur_pred, data_simul_samare_attendu$hauteur_pred)
+
+  expect_equal(data_simul_samare_obtenu$hauteur_pred, data_simul_samare_attendu_2$hauteur_pred)
+  #verif <- bind_cols(data_simul_samare_obtenu$hauteur_pred, data_simul_samare_attendu_2$hauteur_pred)
 })
 
 

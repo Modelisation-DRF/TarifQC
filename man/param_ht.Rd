@@ -2,7 +2,7 @@
 % Please edit documentation in R/Param_ht.R
 \name{param_ht}
 \alias{param_ht}
-\title{Génère les paramètres pour estimer la hauteur totale d'un arbre avec l'équation de Auger (2016)}
+\title{Génère les paramètres pour estimer la hauteur totale de chacun des arbres regroupés en placettes, avec l'équation de Auger (2016)}
 \usage{
 param_ht(
   fic_arbres,
@@ -14,7 +14,10 @@ param_ht(
 )
 }
 \arguments{
-\item{fic_arbres}{Une table contenant la liste d'arbres dont la hauteur est à estimer. La table doit contenir les variables \code{no_arbre} (l'identifiant de l'arbre) et \code{id_pe} (l'identifiant de la placette).}
+\item{fic_arbres}{Une table contenant la liste d'arbres dont la hauteur est à estimer avec leur essence.
+La table doit contenir les variables \code{no_arbre} (l'identifiant de l'arbre) et \code{id_pe} (l'identifiant de la placette)
+et \code{essence} (le code d'essence). Si mode stochastique, la table doit aussi contenir les colonnes step et iter.
+Si pas de step, créer une colonne avec step=1}
 
 \item{mode_simul}{Le mode de simulation (STO = stochastique, DET = déterministe), par défaut "DET".}
 
@@ -27,19 +30,22 @@ param_ht(
 \item{seed_value}{Optionnel. La valeur du seed pour la génération de nombres aléatoires. Généralement utilisé pour les tests de la fonction.}
 }
 \value{
-La fonction retourne une liste de listes, soit une liste par essence pour laquelle il y a une équation de hauteur.
-Pour une essence, la liste contient 4 éléments:
+La fonction retourne, pour le mode stochastique, une table avec autant de lignes que de placette/arbre/iter/step, contenant tous les paramètres nécessaires pour appliquer l'équation h-d.
+Pour le mode déterministe, la fonction retourne une table de paramètres avec une ligne par essence présente dans le fichier \code{fic_arbres}.
+Les variables sont
 \enumerate{
-  \item essence: le code de l'essence
-  \item effet_fixe: une table avec une colonne pour chacun des paramètres des effets fixes de l'équation et une ligne par iteration. Une seule ligne si \code{mode_simul="DET"}.
-  \item random_placette: une table avec 4 colonnes: effet aléatoire de placette, le numéro de l'itération, l'identifiant de la placette et le code de l'essence. Une ligne par placette/itération. 0 si \code{mode_simul="DET"}.
-  \item erreur_residuelle: une table avec 6 colonnes:  erreur résiduelle, identifiant de la placette, identifiant de l'arbre, numéro de step, numéro de l'itération et le code de l'essence. Une ligne par arbre/placette/itération/step. 0 si \code{mode_simul="DET"}.
+  \item id_pe, no_arbre, iter (numérotés de 1 à nb_iter), step (numérotés de 1 à nb_step) (pour le mode stochastique seulement)
+  \item essence utilisée pour le modèle de hauteur
+  \item tous les paramètres des effets fixes des essences du fichier, une colonne par paramètre
+  \item random_ldhp2 effet aléatoire de placette pour l'essence/iter, 0 si mode déterministe
+  \item res_arbre: erreur_residuelle de l'arbre pour une iter/step, 0 si mode déterministe
 }
 }
 \description{
-Génère les paramètres pour estimer la hauteur totale d'un arbre avec l'équation de Auger (2016).
+Génère les paramètres pour estimer la hauteur totale de chacun des arbres regroupés en placettes, avec l'équation de Auger (2016).
 Les paramètres peuvent être générés de façon déterministe ou stochastique.
 Si le mode stochastique est utilisé, les paramètres seront générés pour tous les arbres/itétations/années.
+Si le mode déterministe est utilisé, les paramètres seront générés pour les essences du fichier fourni en entrée.
 }
 \details{
 L'équation pour estimer la hauteur totale a été étalonnée avec un modèle linéaire mixte, par essence (Auger 2016).

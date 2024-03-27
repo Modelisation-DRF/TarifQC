@@ -7,41 +7,38 @@
 cubage(
   fic_arbres,
   mode_simul = "DET",
-  iteration = 1,
-  step = 1,
-  parametre_vol = NULL
+  nb_iter = 1,
+  nb_step = 1,
+  seed_value = NULL
 )
 }
 \arguments{
-\item{fic_arbres}{Une table contenant la liste d'arbres regroupés en placettes (pour une itération et une année données) avec les informations suivantes:
+\item{fic_arbres}{Une table contenant la liste d'arbres regroupés en placettes avec les informations suivantes:
 \itemize{
    \item id_pe: identifiant unique de la placette
    \item dhpcm: dhp (cm) de l'arbre ou classe de dhp (>9 cm)
    \item essence: code d'essence de l'arbre (ex: SAB, EPN, BOP)
    \item no_arbre: identifiant de l'arbre ou de la combinaison dhp/essence
    \item hauteur_pred: hauteur de l'arbre (m)
+   \item iter: numéro de l'itération, seulement si mode stochastique, doit être numéroté de 1 à nb_iter
+   \item step: numéro de la step, seulement si mode stochastique, doit être numéroté de 1 à nb_step. Obligatoire même si le fichier n'est qu'une liste d'arbres à un moment donné.
 }}
 
 \item{mode_simul}{Mode de simulation (STO = stochastic, DET = deterministic), par défaut "DET"}
 
-\item{iteration}{Si \code{mode_simul}='STO', le numéro de l'iteration à estimer (par défaut 1)}
-
-\item{step}{Si \code{mode_simul}='STO', le numéro de l'année à estimer (par défaut 1, 1 à nb_step)}
-
-\item{parametre_vol}{Si \code{mode_simul}='STO', l'objet retourné par la fonction \code{param_vol} contenant les paramètres pour le modèle de volume (pour toutes les itérations).}
+\item{seed_value}{Optionnel. La valeur du seed pour la génération de nombres aléatoires. Généralement utilisé pour les tests de la fonction.}
 }
 \value{
 La table \code{fic_arbres} avec une colonne contenant le volume marchand estimé en dm3 (vol_dm3).
 }
 \description{
-Estime le volume marchand sans écorce de chacun des arbres avec l'équation de Fortin et al. (2007). La fonction permet l'estimation pour une liste d'arbres regroupés en placette à une année donnée.
+Estime le volume marchand sans écorce de chacun des arbres avec l'équation de Fortin et al. (2007). La fonction permet l'estimation pour une liste d'arbres regroupés en placette.
 L'estimation peut être déterministe ou stochastique.
 }
 \details{
 L'équation pour estimer le volume marchand a été étalonnée avec un modèle linéaire mixte où l'essence est une covariable dans l'équation (Fortin et al. (2007).
 Le modèle inclut un effet aléatoire de placette et et un effet alétoire de virée, mais seul l'effet aléatoire de placette est simulé en mode stochastique.
-La fonction estime le volume de façon déterministe ou stochastique. Si l'estimation est stochastique, elle est pour une itération et une année données , la liste d'arbres fournie doit donc être pour une itération et une année données.
-Si \code{mode_simul}='STO', les paramètres doivent être générés préalablement avec la fonction \code{param_vol}. Voir les exemples.
+La fonction estime le volume de façon déterministe ou stochastique.
 
 Fortin, M., J. DeBlois, S. Bernier et G. Blais, 2007. Mise au point d’un tarif de cubage général pour
 les forêts québécoises : une approche pour mieux évaluer l’incertitude associée aux prévisions.
@@ -58,51 +55,10 @@ DataHtVol <- cubage(fic_arbres=DataHt)
 DataHt <- relation_h_d(fic_arbres=fic_artemis_det, grouping_vars = 'annee')
 DataHtVol <- cubage(fic_arbres=DataHt)
 
-# Exemple 3: STOCHASTIQUE: une seul mesurage par arbre ---------------------------------------
-# Générer les paramètres de hauteur volume pour plusieurs itérations
-parametre_ht <- param_ht(fic_arbres=fic_arbres_test, mode_simul='STO', nb_iter=10)
-parametre_vol <- param_vol(fic_arbres=fic_arbres_test, mode_simul='STO', nb_iter=10)
-# Estimer la hauteur et le volume pour l'itération 2
-DataHt <- relation_h_d(fic_arbres=fic_arbres_test, mode_simul='STO', iteration=2, parametre_ht=parametre_ht)
-DataHtVol <- cubage(fic_arbres=DataHt, mode_simul='STO', iteration=2, parametre_vol=parametre_vol)
-
-# Exemple 4: STOCHASTIQUE: plusieurs mesurages par arbre --------------------------------------
-# Générer les paramètres de hauteur volume pour plusieurs step et itérations
-parametre_ht <- param_ht(fic_arbres=fic_arbres_test, mode_simul='STO', nb_iter=10, nb_step=5)
-parametre_vol <- param_vol(fic_arbres=fic_arbres_test, mode_simul='STO', nb_iter=10)
-# Estimer la hauteur et le volume pour l'itération 2 et le pas de simulation 3
-DataHt <- relation_h_d(fic_arbres=fic_artemis_sto[fic_artemis_sto$iter==2 & fic_artemis_sto$annee==2023+((3-1)*10),], mode_simul='STO', iteration=2, step=3, parametre_ht=parametre_ht)
-DataHtVol <- cubage(fic_arbres=DataHt, mode_simul='STO', iteration=2, parametre_vol=parametre_vol)
-
-# Exemple 5: STOCHASTIQUE: traiter toutes les itérations et step -------------------------------
-# Générer les paramètres de hauteur et volume pour toutes les itérations et time steps
+# Exemple 3: STOCHASTIQUE: plusieurs itérations et plusieurs step -------------------------------
 nb_iter <- length(unique(fic_artemis_sto$iter)) # 10
-nb_step <- length(unique(fic_artemis_sto$annee)) # 5 (donc 4 décennies + le point de départ en 2023)
-parametre_ht <- param_ht(fic_arbres=fic_artemis_sto, mode_simul='STO', nb_iter=nb_iter, nb_step=nb_step)
-parametre_vol <- param_vol(fic_arbres=fic_artemis_sto, mode_simul='STO', nb_iter=nb_iter)
-# Appliquer les modèles de hauteur et de volume à chaque iteration/step
-fic_artemis_final1 <- NULL
-for (i in 1:nb_iter){
-  for (k in 1:nb_step){
-      ht <- relation_h_d(fic_arbres=fic_artemis_sto[fic_artemis_sto$iter==i & fic_artemis_sto$annee==2023+((k-1)*10),], mode_simul='STO', iteration=i, step=k, parametre_ht=parametre_ht)
-      vol <- cubage(fic_arbres=ht, mode_simul='STO', iteration=i, parametre_vol=parametre_vol)
-      fic_artemis_final1 <- bind_rows(fic_artemis_final1, vol)
-      }
-   }
+nb_step <- length(unique(fic_artemis_sto$annee)) # 5
+ht <- relation_h_d(fic_arbres=fic_artemis_sto, mode_simul='STO', nb_iter=nb_iter, nb_step=nb_step)
+vol <- cubage(fic_arbres=ht, mode_simul='STO', nb_iter=nb_iter, nb_step=nb_step)
 
-# On peut aussi paralléliser les deux boucles for
-nb_iter <- length(unique(fic_artemis_sto$iter)) # 10
-nb_step <- length(unique(fic_artemis_sto$annee)) # 5 (donc 4 décennies + le point de départ en 2023)
-parametre_ht <- param_ht(fic_arbres=fic_artemis_sto, mode_simul='STO', nb_iter=nb_iter, nb_step=nb_step)
-parametre_vol <- param_vol(fic_arbres=fic_artemis_sto, mode_simul='STO', nb_iter=nb_iter)
-# Appliquer les modèles de hauteur et de volume à chaque iteration/step
-registerDoFuture()
-plan(multisession)
-fic_artemis_final2 <- bind_rows(
-  foreach (i = 1:nb_iter) \%:\% # nesting operator
-      foreach (k = 1:nb_step) \%dopar\% {
-            fic <- relation_h_d(fic_arbres=fic_artemis_sto[fic_artemis_sto$iter==i & fic_artemis_sto$annee==2023+((k-1)*10),], mode_simul='STO', iteration=i, step=k, parametre_ht=parametre_ht)
-            fic <- cubage(fic_arbres=fic, mode_simul='STO', iteration=i, parametre_vol=parametre_vol)
-            }
- )
 }

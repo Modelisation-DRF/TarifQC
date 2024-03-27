@@ -3,7 +3,7 @@
 \docType{data}
 \name{fic_artemis_sto}
 \alias{fic_artemis_sto}
-\title{Data frame simulating an exportation from Artemis growth simulator in stochastic mode}
+\title{Table reproduisant une exportation du simulateur Artémis en mode stochastique}
 \format{
 ## `fic_artemis_sto`
 A data frame with 3950 lignes et 15 colonnes:
@@ -22,6 +22,7 @@ A data frame with 3950 lignes et 15 colonnes:
   \item{no_arbre}{Identifiant de la combinaison dhpcm/essence}
   \item{essence}{Code d'essence}
   \item{dhpcm}{Classe de DHP (cm)}
+  \item{annee}{Année correspondant à la step}
 }
 }
 \usage{

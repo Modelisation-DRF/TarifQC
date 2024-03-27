@@ -1,4 +1,4 @@
-#' Data frame with 2 plots from Quebec's temporary plots database
+#' Table avec la liste d'arbres de deux placettes du réseau des placettes temporaire du Québec
 #'
 #' Deux placettes des PET avec leur liste d'arbres
 #'
@@ -22,7 +22,7 @@
 
 
 
-#' Data frame simulating an exportation from Artemis growth simulator in stochastic mode
+#' Table reproduisant une exportation du simulateur Artémis en mode stochastique
 #'
 #' Les deux placettes du fichier d'exemple fic_arbres_test, avec 5 pas de simulation et 10 itérations, à l'échelle de l'arbre
 #'
@@ -43,12 +43,13 @@
 #'   \item{no_arbre}{Identifiant de la combinaison dhpcm/essence}
 #'   \item{essence}{Code d'essence}
 #'   \item{dhpcm}{Classe de DHP (cm)}
+#'   \item{annee}{Année correspondant à la step}
 #' }
 "fic_artemis_sto"
 
 
 
-#' Data frame simulating an exportation from Artemis growth simulator in deterministic mode
+#' Table reproduisant une exportation du simulateur Artémis en mode déterminisute
 #'
 #' Les deux placettes du fichier d'exemple fic_arbres_test, avec 5 pas de simulation, à l'échelle de l'arbre
 #'
@@ -68,6 +69,7 @@
 #'   \item{no_arbre}{Identifiant de la combinaison dhpcm/essence}
 #'   \item{essence}{Code d'essence}
 #'   \item{dhpcm}{Classe de DHP (cm)}
+#'   \item{annee}{Année correspondant à la step}
 #' }
 "fic_artemis_det"
 

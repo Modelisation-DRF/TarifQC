@@ -30,7 +30,7 @@ usethis::use_data(fic_arbres_reg_eco, overwrite = TRUE)
 
 
 
-# Simuler un fichier résultant d'Artémis en mode stochastique et 5 pas de simulation, à l'échelle de l'arbre
+# Reproduire un fichier résultant d'Artémis en mode stochastique et 5 pas de simulation, à l'échelle de l'arbre
 nb_iter=10
 nb_step=5
 fic <- as.data.frame(unclass(expand_grid(iter = 1:nb_iter, fic_arbres_test)))
@@ -39,8 +39,8 @@ fic <- fic %>% mutate(dhpcm = ifelse(dhpcm<9.1, 9.1, dhpcm))
 fic2 <- as.data.frame(unclass(expand_grid(step = 1:nb_step, fic)))
 fic2$dhpcm <- rnorm(nb_step*length(fic$id_pe), mean=fic$dhpcm, sd=0.5)
 fic_artemis_sto <- fic2 %>% mutate(dhpcm=dhpcm+step,
-                                   annee = 2023 + 10*(step-1)) %>%
-  dplyr::select(-step)
+                                   annee = 2023 + 10*(step-1))
+  #dplyr::select(-step)
 usethis::use_data(fic_artemis_sto, overwrite = TRUE)
 
 

@@ -1,4 +1,4 @@
-# relation_h_d(fic_arbres, mode_simul="DET", iteration=1, step=1,  parametre_ht)
+# relation_h_d(fic_arbres, mode_simul="DET")
 
 
 
@@ -6,15 +6,7 @@ test_that("relation_h_d() avec param par defaut estime les bonnes hauteurs", {
   data_arbre <- readRDS(test_path("fixtures", "data_arbre.rds"))
   data_arbre_attendu <- readRDS(test_path("fixtures", "data_arbre_attendu.rds"))
   DataHt <- relation_h_d(fic_arbres=data_arbre)
-  expect_equal(DataHt, data_arbre_attendu)
-})
-
-test_that("relation_h_d() avec param déterministe et fichier des parametres fournit estime les bonnes hauteurs", {
-  data_arbre <- readRDS(test_path("fixtures", "data_arbre.rds"))
-  data_arbre_attendu <- readRDS(test_path("fixtures", "data_arbre_attendu.rds"))
-  parametre_ht_attendu <- readRDS(test_path("fixtures", "parametre_ht_attendu.rds"))
-  DataHt <- relation_h_d(fic_arbres=data_arbre, mode_simul = 'DET', parametre_ht=parametre_ht_attendu)
-  expect_equal(DataHt, data_arbre_attendu)
+  expect_equal(DataHt$hauteur_pred, data_arbre_attendu$hauteur_pred)
 })
 
 test_that("relation_h_d() avec param déterministe et utilisation du grouping_vars estime les bonnes hauteurs", {
@@ -28,8 +20,35 @@ test_that("relation_h_d() avec param déterministe et utilisation du grouping_va
 })
 
 
+# tester le stochastique quand il y plusieurs mesures par arbre
+test_that("relation_h_d() avec mode stochastique (seed=20) et nb_step=4 pour le meme arbre retourne la bonne hauteur pour la mesure 2", {
+  data_arbre <- readRDS(test_path("fixtures", "data_arbre_sto.rds"))
+  data_arbre_attendu_sto_2 <- readRDS(test_path("fixtures", "data_arbre_attendu_sto_2.rds"))
+
+  DataHt <- relation_h_d(fic_arbres=data_arbre, mode_simul = "STO", nb_iter = 200, nb_step = 5, seed=20)
+
+  expect_equal(DataHt, data_arbre_attendu_sto_2)
+})
+
+# tester le stochastique quand il n'y qu'une seule mesure par arbre
+test_that("relation_h_d() avec mode stochastique avec seed=20 estime les bonnes hauteurs", {
+  data_arbre <- readRDS(test_path("fixtures", "data_arbre_sto.rds"))
+  data_arbre <- data_arbre %>% filter(step==1)
+  data_arbre_attendu_sto1_2 <- readRDS(test_path("fixtures", "data_arbre_attendu_sto1_2.rds"))
+  DataHt <- relation_h_d(fic_arbres=data_arbre, mode_simul = "STO", nb_iter = 200, nb_step=1, seed_value = 20)
+  expect_equal(DataHt, data_arbre_attendu_sto1_2)
+})
+
+
+
 test_that("relation_h_d() avec mode_simiul=STO mais grouping_vars non nul retourne un message d'erreur", {
-   expect_error(relation_h_d(fic_arbres=data_arbre, grouping_vars = 'step', mode_simul='STO', parametre_ht = parametre_ht))
+   data_arbre <- readRDS(test_path("fixtures", "data_arbre_sto.rds"))
+   expect_error(relation_h_d(fic_arbres=data_arbre, grouping_vars = 'step', mode_simul='STO'))
+})
+
+test_that("relation_h_d() avec mode_simiul=STO sans les variables iter et step", {
+  data_arbre <- readRDS(test_path("fixtures", "data_arbre_sto.rds")) %>% dplyr::select(-iter, -step)
+  expect_error(relation_h_d(fic_arbres=data_arbre, mode_simul='STO', nb_iter = 2, nb_step = 1))
 })
 
 
@@ -127,36 +146,26 @@ test_that("relation_h_d() avec id_pe manquant retourne les bonnes hauteurs", {
   expect_equal(DataHt$hauteur_pred, c(8.990205,8.990205))
 })
 
-# tester le stochastique quand il n'y qu'une seule mesure par arbre
-test_that("relation_h_d() avec mode stochastique avec seed=20 estime les bonnes hauteurs", {
-  data_arbre <- readRDS(test_path("fixtures", "data_arbre.rds"))
-  data_arbre_attendu_sto <- readRDS(test_path("fixtures", "data_arbre_attendu_sto.rds"))
-  parametre_ht <- param_ht(fic_arbres=data_arbre, mode_simul='STO', nb_iter=2, seed_value = 20)
-  DataHt <- relation_h_d(fic_arbres=data_arbre, mode_simul = "STO", iteration = 1, parametre_ht=parametre_ht)
-  expect_equal(DataHt, data_arbre_attendu_sto)
-})
-
-# tester le stochastique quand il n'y plusieurs mesures par arbre
-test_that("relation_h_d() avec mode stochastique (seed=20) et nb_step=4 pour le meme arbre retourne la bonne hauteur pour la mesure 2", {
-  data_arbre1 <- data.frame(id_pe='1', veg_pot='FE3', sdom_bio="1", milieu='0', p_tot=1000, t_ma=0.2, altitude=200, essence='ERS', dhpcm=10, nb_tige=1, no_arbre=1, no_mes=1)
-  data_arbre2 <- data.frame(id_pe='1', veg_pot='FE3', sdom_bio="1", milieu='0', p_tot=1000, t_ma=0.2, altitude=200, essence='ERS', dhpcm=11, nb_tige=1, no_arbre=1, no_mes=2)
-  data_arbre3 <- data.frame(id_pe='1', veg_pot='FE3', sdom_bio="1", milieu='0', p_tot=1000, t_ma=0.2, altitude=200, essence='ERS', dhpcm=12, nb_tige=1, no_arbre=1, no_mes=3)
-  data_arbre4 <- data.frame(id_pe='1', veg_pot='FE3', sdom_bio="1", milieu='0', p_tot=1000, t_ma=0.2, altitude=200, essence='ERS', dhpcm=13, nb_tige=1, no_arbre=1, no_mes=4)
-  data_arbre <- bind_rows(data_arbre1, data_arbre2, data_arbre3, data_arbre4)
-
-  parametre_ht <- param_ht(fic_arbres=data_arbre, mode_simul='STO', nb_iter = 2, nb_step = 4, seed_value = 20)
-  DataHt <- relation_h_d(fic_arbres=data_arbre[data_arbre$no_mes==2,], mode_simul = "STO", iteration = 1, step = 2, parametre_ht=parametre_ht)
-
-  expect_equal(round(DataHt$hauteur_pred,2), round(11.93419,2))
-})
-
-
 
 test_that("relation_h_d() avec reg_eco fonctionne", {
   data_arbre <- data.frame(id_pe=1, veg_pot='FE3', reg_eco="5e", milieu='0', p_tot=1000, t_ma=0.1, altitude=200, essence='ERS', dhpcm=10, nb_tige=10, no_arbre=1, step=1)
   DataHt <- relation_h_d(fic_arbres=data_arbre, mode_simul='DET', reg_eco = T)
   expect_equal(round(DataHt$hauteur_pred,2), round(9.237575,2))
 })
+
+
+
+test_that("relation_h_d() avec un fichier de samare estime les bonnes hauteurs", {
+  data_simul_samare <- readRDS(test_path("fixtures", "data_simul_samare.rds"))
+  data_simul_samare_attendu_2 <- readRDS(test_path("fixtures", "data_simul_samare_attendu_2.rds"))
+  nb_iter <- max(data_simul_samare$iter)
+  nb_step <- max(data_simul_samare$step)
+  data_simul_samare_obtenu <- relation_h_d(fic_arbres = data_simul_samare, mode_simul = 'STO', nb_iter = nb_iter, nb_step = nb_step, reg_eco = T, dt=5, seed_value = 20)
+
+  expect_equal(data_simul_samare_obtenu$hauteur_pred, data_simul_samare_attendu_2$hauteur_pred)
+  #verif <- bind_cols(data_simul_samare_obtenu$hauteur_pred, data_simul_samare_attendu_2$hauteur_pred)
+})
+
 
 # tester un fichier avec quelques arbres avec une ht fournie et d'autres à estimer: NON, la fonction va toujours estimer la hauteur de tous les arbres du fichier, ça sera à l'utilisateur ensuite de remplacer les ht_pred par les hauteur mesurées au besoin
 

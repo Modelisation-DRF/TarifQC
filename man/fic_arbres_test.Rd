@@ -3,7 +3,7 @@
 \docType{data}
 \name{fic_arbres_test}
 \alias{fic_arbres_test}
-\title{Data frame with 2 plots from Quebec's temporary plots database}
+\title{Table avec la liste d'arbres de deux placettes du réseau des placettes temporaire du Québec}
 \format{
 ## `fic_arbres_test`
 A data frame with 79 lignes et 13 colonnes:

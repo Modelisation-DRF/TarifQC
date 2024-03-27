@@ -48,7 +48,7 @@ DataHtVol <- cubage(fic_arbres=DataHt)
 De l'aide supplémentaire peut être obtenu sur les fonctions
 ```{r eval=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 ?relation_h_d
-?cuabge
+?cubage
 ```
 Pour obtenir la liste des data.frame disponibles
 ```{r eval=FALSE, echo=FALSE, message=FALSE, warning=FALSE}

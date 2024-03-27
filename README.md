@@ -21,48 +21,50 @@ Auger, I., 2016. Une nouvelle relation hauteur-diamètre tenant compte de l’in
 Fortin, M., J. DeBlois, S. Bernier et G. Blais, 2007. Mise au point d’un tarif de cubage général pour les forêts québécoises : une approche pour mieux évaluer l’incertitude associée aux prévisions. For. Chron. 83: 754-765.
 
 ## Dépendences
-Ce package dépends des packages ExtractMap et TarifQC.
-
-- TarifQC est disponible ici https://github.com/Modelisation-DRF/TarifQC
-
-- ExtractMap est disponible sur demande.
+Aucune dépendence à des packages externes à CRAN
 
 ## Comment obtenir le code source
-Taper cette ligne dans une invite de commande pour cloner le dépôt dans un sous-dossier "natura3":
+Taper cette ligne dans une invite de commande pour cloner le dépôt dans un sous-dossier "tarifqc":
 
 ```{r eval=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
-git clone https://github.com/Modelisation-DRF/Natura3 natura3
+git clone https://github.com/Modelisation-DRF/TarifQC tarifqc
 ```
 
-## Comment installer le package Natura3 dans R
+## Comment installer le package TarifQC dans R
 
 ```{r eval=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 require(remotes)
-install_github("https://github.com/Modelisation-DRF/Natura3", ref="main", auth_token = "demander_un_token")
+install_github("https://github.com/Modelisation-DRF/TarifQC", ref="main", auth_token = "demander_un_token")
 ```
 ## Exemple
 
 Ce package inclut des objets de type data.frame contenent des listes d'arbres regroupées en placettes. Ces objets peuvent être utilisés pour essayer le package.
 
 ```{r eval=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
-library(Natura3)
-data_simul <- SimulNatura(file_arbre=fichier_arbres_sanscov, file_etude=fichier_arbres_etudes, horizon=5)
+library(TarifQC)
+DataHt <- relation_h_d(fic_arbres=fic_arbres_test)
+DataHtVol <- cubage(fic_arbres=DataHt)
 ```
-De l'aide supplémentaire peut être obtenu sur la fonction avec la commande
+De l'aide supplémentaire peut être obtenu sur les fonctions
 ```{r eval=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
-?SimulNatura
+?relation_h_d
+?cuabge
 ```
 Pour obtenir la liste des data.frame disponibles
 ```{r eval=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
-data(package='Natura3')
+data(package='TarifQC')
 ```
 Pour une description du data.frame
 ```{r eval=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
-?fichier_arbres_sanscov
+?fic_arbres_test
 ```
 
 ## Historique des versions
 
 | Date |  Version  | Features et bugs |      Détails     |
 |:-----|:---------:|:-----------------|:-----------------|
-| 2024-03-25 | 1.0.0 |  | Première version stable |
+| 2024-03-26 | 1.1.3 |  | déplacer les packages de depends à imports dans DESCRIPTION, utiliser la fct mvrnorm de rockchalk au lieu de MASS |
+| 2024-02-22 | 1.1.2 |  | ajout de l'option na.rm=T dans le calcul de la st et densité de chaque placette |
+| 2024-02-20 | 1.1.1 |  | correction de bugs mineurs détectés en utilisant un fichier de samare avec peu d'essences |
+| 2024-02-08 | 1.1.0 | bugs | amélioration de la vitesse d'exécution en mode stochastique |
+

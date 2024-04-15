@@ -156,7 +156,7 @@ test_that("relation_h_d() avec reg_eco fonctionne", {
 
 
 test_that("relation_h_d() avec un fichier de samare estime les bonnes hauteurs", {
-  data_simul_samare <- readRDS(test_path("fixtures", "data_simul_samare.rds"))
+  data_simul_samare <- readRDS(test_path("fixtures", "data_simul_samare.rds")) # une placette
   data_simul_samare_attendu_2 <- readRDS(test_path("fixtures", "data_simul_samare_attendu_2.rds"))
   nb_iter <- max(data_simul_samare$iter)
   nb_step <- max(data_simul_samare$step)
@@ -165,6 +165,40 @@ test_that("relation_h_d() avec un fichier de samare estime les bonnes hauteurs",
   expect_equal(data_simul_samare_obtenu$hauteur_pred, data_simul_samare_attendu_2$hauteur_pred)
   #verif <- bind_cols(data_simul_samare_obtenu$hauteur_pred, data_simul_samare_attendu_2$hauteur_pred)
 })
+
+
+test_that("relation_h_d() avec mode stochastique retourne le bon nombre de lignes avec nb_step>9", {
+
+  data <- readRDS(test_path("fixtures", "data_simul_samare.rds")) # une placette, 7 steps, 2 iters
+
+  # ajouter une 8e step
+  step <- data %>% filter(step==7) %>% mutate(step=8)
+  data2 <- bind_rows(data, step)
+
+  # ajouter une 9e step
+  step <- data %>% filter(step==7) %>% mutate(step=9)
+  data3 <- bind_rows(data2, step)
+
+  # ajouter une 10e step
+  step <- data %>% filter(step==7) %>% mutate(step=10)
+  data4 <- bind_rows(data3, step)
+  nb_rows_soumis <- nrow(data4)
+
+  nb_iter <- max(data4$iter)
+  nb_step <- max(data4$step)
+
+  data_obtenu <- relation_h_d(fic_arbres = data4, mode_simul = 'STO', nb_iter = nb_iter, nb_step = nb_step, reg_eco = T, dt=5)
+  nb_rows_obtenu <- nrow(data_obtenu)
+  nb_row_attendu <- nrow(data4)
+
+  max_step_obtenu <- max(data_obtenu$step)
+
+
+  expect_equal(nb_rows_obtenu,nb_row_attendu)
+  expect_equal(max_step_obtenu,nb_step)
+
+})
+
 
 
 # tester un fichier avec quelques arbres avec une ht fournie et d'autres à estimer: NON, la fonction va toujours estimer la hauteur de tous les arbres du fichier, ça sera à l'utilisateur ensuite de remplacer les ht_pred par les hauteur mesurées au besoin

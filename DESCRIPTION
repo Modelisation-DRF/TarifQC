@@ -1,7 +1,7 @@
 Package: TarifQC
 Type: Package
 Title: Estimating total tree height and merchantable volume
-Version: 1.1.3
+Version: 1.1.4
 Author: Isabelle Auger, isabelle.auger@mrnf.gouv.qc.ca
 Maintainer: Isabelle Auger <isabelle.auger@mrnf.gouv.qc.ca>
 Description: Estimating total tree height with the model from Auger (2016)

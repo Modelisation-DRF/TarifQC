@@ -130,7 +130,8 @@ param_vol <- function(fic_arbres, mode_simul="DET", nb_iter=1, nb_step=1, seed_v
     rand <- rand %>%
       group_by(iter,id_pe) %>%
       pivot_longer(cols=contains('V'), names_to = "step", values_to = 'random_plot') %>%
-      mutate(step=as.numeric(substr(step,2,2))) %>%
+      #mutate(step=as.numeric(substr(step,2,2))) %>% # ceci ne fonctionne pas avec step=10, ça plus que 1 caractère
+      mutate(step=as.numeric(gsub('V','',step))) %>%
       ungroup()
 
     #générer les erreurs résiduelles qui sont fonction de l'essence pour chaque arbre
@@ -139,7 +140,7 @@ param_vol <- function(fic_arbres, mode_simul="DET", nb_iter=1, nb_step=1, seed_v
     liste_ess <- sigma2_ess$ess
     res_tous <- NULL
     for (ess in liste_ess){
-      #ess='EPN'
+      #ess='ERS'
       #res = as.data.frame(rnorm(nb_iter*length(liste_arbre$no_arbre), mean=0, sd = sqrt(as.matrix(sigma2_ess[sigma2_ess$ess==ess,2]))))
       sig = diag(sigma2_ess[sigma2_ess$ess==ess,2], nrow=nb_step)
       mu=rep(0,nb_step)
@@ -155,7 +156,8 @@ param_vol <- function(fic_arbres, mode_simul="DET", nb_iter=1, nb_step=1, seed_v
       res <- res %>%
         group_by(iter,id_pe, no_arbre) %>%
         pivot_longer(cols=contains('V'), names_to = "step", values_to = ess) %>%
-        mutate(step=as.numeric(substr(step,2,2))) %>%
+        #mutate(step=as.numeric(substr(step,2,2))) %>% # ceci ne fonctionne pas avec step=10, ça plus que 1 caractère
+        mutate(step=as.numeric(gsub('V','',step))) %>%
         ungroup()
       if (is.null(res_tous)) {res_tous = res}
       else{res_tous <- left_join(res_tous, res, by=c('iter','id_pe','no_arbre','step'))}

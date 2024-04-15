@@ -80,3 +80,41 @@ test_that("param_vol() avec mode stochastique avec nb_iter=1 retourne un message
   expect_error(param_vol(fic_arbres=fic, mode_simul='STO', nb_iter=1))
 
 })
+
+
+
+test_that("param_vol() avec mode stochastique retourne le bon nombre de lignes dans random avec nb_step>9", {
+
+
+  data <- readRDS(test_path("fixtures", "data_simul_samare.rds")) # une placette, 7 steps, 2 iters
+
+  # ajouter une 8e step
+  step <- data %>% filter(step==7) %>% mutate(step=8)
+  data2 <- bind_rows(data, step)
+
+  # ajouter une 9e step
+  step <- data %>% filter(step==7) %>% mutate(step=9)
+  data3 <- bind_rows(data2, step)
+
+  # ajouter une 10e step
+  step <- data %>% filter(step==7) %>% mutate(step=10)
+  data4 <- bind_rows(data3, step)
+  nb_rows_soumis <- nrow(data4)
+
+  nb_iter <- max(data4$iter)
+  nb_step <- max(data4$step)
+
+  param_obtenu <- param_vol(fic_arbres=data4, mode_simul='STO', nb_iter=nb_iter, nb_step=nb_step)
+  param_random_obtenu <- param_obtenu$random
+
+  nb_rows_obtenu <- nrow(param_random_obtenu)
+  nb_row_attendu <- nrow(data4 %>% dplyr::select(id_pe,no_arbre) %>% unique)*nb_iter*nb_step
+
+  max_step_obtenu <- max(param_random_obtenu$step)
+
+  expect_equal(nb_rows_obtenu, nb_row_attendu) #ok
+
+  expect_equal(max_step_obtenu, nb_step) #ok
+
+
+})

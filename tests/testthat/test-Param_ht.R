@@ -97,6 +97,7 @@ test_that("param_ht() avec mode stochastique (seed=20) retourne les bonnes erreu
 
   data_arbre3 <- readRDS(test_path("fixtures", "data_arbre_sto.rds"))
 
+
   param_sto <- param_ht(fic_arbres=data_arbre3, mode_simul='STO', nb_iter=200, nb_step=5, seed_value=20) # il faut bcp d'iteration pour que la moyenne des resid=0, je ne sais pas pourquoi. Pour les effets fixes etr l'effet aléatoire, 200 iter suffit
 
 
@@ -135,6 +136,38 @@ test_that("param_ht() avec mode stochastique avec nb_iter=1 retourne un message 
 
 })
 
+
+
+
+test_that("param_ht() avec mode stochastique retourne le bon nombre de lignes nb_step>9", {
+
+
+  data <- readRDS(test_path("fixtures", "data_simul_samare.rds")) # une placette, 7 steps, 2 iters
+
+
+  # ajouter une 8e step
+  step <- data %>% filter(step==7) %>% mutate(step=8)
+  data2 <- bind_rows(data, step)
+
+  # ajouter une 9e step
+  step <- data %>% filter(step==7) %>% mutate(step=9)
+  data3 <- bind_rows(data2, step)
+
+  # ajouter une 10e step
+  step <- data %>% filter(step==7) %>% mutate(step=10)
+  data4 <- bind_rows(data3, step)
+  nb_rows_soumis <- nrow(data4)
+
+  nb_iter <- max(data4$iter)
+  nb_step <- max(data4$step)
+
+  param_obtenu <- param_ht(fic_arbres=data4, mode_simul='STO', nb_iter=nb_iter, nb_step=nb_step, dt=5)
+  nb_rows_obtenu <- nrow(param_obtenu)
+
+  expect_equal(nb_rows_obtenu, nb_rows_soumis) #ok
+
+
+})
 ##################################################################
 ##################################################################
 

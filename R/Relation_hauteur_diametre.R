@@ -82,6 +82,7 @@ relation_h_d<-function (fic_arbres, mode_simul="DET", nb_iter=1, nb_step=1, dt=1
   #fic_arbres=data_arbre; mode_simul='DET'; grouping_vars=NULL; nb_iter=1; nb_step=1; dt=10;
   # fic_arbres = SimulHtVol1; mode_simul = 'STO'; nb_iter = nb_iter; nb_step = nb_step; reg_eco = T; dt=5; grouping_vars=NULL; seed_value=NULL;
 # fic_arbres = data_simul_samare; mode_simul = 'STO'; nb_iter = nb_iter; nb_step = nb_step; reg_eco = T; dt=5; seed_value = 20;
+# fic_arbres = data_simul_samare4; mode_simul = 'STO'; nb_iter = nb_iter; nb_step = nb_step; reg_eco = T; dt=5; seed_value = NULL;
 
   # le parametre grouping_vars ne peut pas etre utilisé avec le mode stochastique
   # en mode stochastique, les variables iter et step sont obligatoires

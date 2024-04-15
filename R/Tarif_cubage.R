@@ -71,13 +71,16 @@ cubage <- function (fic_arbres, mode_simul='DET', nb_iter=1, nb_step=1, seed_val
   # DataHt <- relation_h_d(fic_arbres=SimulHtVol1, mode_simul='STO', nb_iter=max(SimulHtVol1$iter), nb_step=max(SimulHtVol1$step), dt=5, reg_eco=T)
  # fic_arbres=DataHt; mode_simul='STO'; nb_iter=max(SimulHtVol1$iter); nb_step=max(SimulHtVol1$step);
 
+  # fic_arbres=data_simul_samare_obtenu; mode_simul='STO'; nb_iter=nb_iter; nb_step=nb_step;seed_value=NULL;
+
+
   # en mode stochastique, les variables iter et step sont obligatoires
   if (mode_simul=='STO'){
      if (length(setdiff(c("iter","step"), names(fic_arbres))) >0) { stop("les colonnes iter et step doivent être dans fic_arbres avec mode_simul=STO")}
   }
 
 
-  # générer les paramètres de la relation h_d
+  # générer les paramètres du tarif de cubage
   parametre_vol <- param_vol(fic_arbres=fic_arbres, mode_simul=mode_simul, nb_iter=nb_iter, nb_step=nb_step, seed_value=seed_value)
 
   # association des essences aux essences du tarif de cubage (tarif_ass_ess.rda)

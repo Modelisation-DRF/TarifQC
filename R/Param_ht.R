@@ -67,6 +67,7 @@ param_ht <- function(fic_arbres, mode_simul='DET', nb_iter=1, nb_step=1, dt=10, 
   # fic_arbres=data_arbre; mode_simul='DET'; nb_iter=1; nb_step=1; dt=10;
   # fic_arbres = fic_arbres; mode_simul = mode_simul; nb_iter = nb_iter; nb_step = nb_step; dt = dt; seed_value = seed_value;
 
+
   # ne garder que les variables nécessaires si stochastique
   if (mode_simul=='STO'){
     fic_arbres <- fic_arbres %>% dplyr::select(id_pe, no_arbre, essence, iter, step) # si sto, on a besoin de iter et step
@@ -116,7 +117,7 @@ param_ht <- function(fic_arbres, mode_simul='DET', nb_iter=1, nb_step=1, dt=10, 
   tous <- list()
   for (ess in ht_liste_ess_complet) {
 
-    # ess="TIL"
+    # ess="ERS"
 
       # lecture des effets fixes pour l'essence
       param2_tr <- ht_param_fixe[[ess]] %>% dplyr::select(-essence)
@@ -180,7 +181,8 @@ param_ht <- function(fic_arbres, mode_simul='DET', nb_iter=1, nb_step=1, dt=10, 
       residu <- residu %>%
         group_by(iter, id_pe, no_arbre, ess_arbre) %>%
         pivot_longer(cols=contains('V'), names_to = "step", values_to = 'res_arbre') %>%
-        mutate(step=as.numeric(substr(step,2,2))) %>%
+        #mutate(step=as.numeric(substr(step,2,2))) %>% # ceci ne fonctionne pas avec step=10, ça plus que 1 caractère
+        mutate(step=as.numeric(gsub('V','',step))) %>%
         ungroup()
       residu$essence <- ess
       #var_empirique <- residu %>% filter(step==1) %>% summarise(vres=var(res_arbre)) # ok ici

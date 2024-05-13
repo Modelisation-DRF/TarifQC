@@ -118,3 +118,4 @@ test_that("param_vol() avec mode stochastique retourne le bon nombre de lignes d
 
 
 })
+

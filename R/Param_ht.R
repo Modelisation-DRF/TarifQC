@@ -109,7 +109,7 @@ param_ht <- function(fic_arbres, mode_simul='DET', nb_iter=1, nb_step=1, dt=10, 
     data_arbre <- as.data.frame(unclass(expand_grid(iter = 1:nb_iter, liste_arbre)))
 
     # fonction pour générer un element de la matrice de var-cov
-    f <- function(i, j, std_res, rho, dt) { var_res * rho^(abs(j-i)*dt) } # correlation sp(pow)
+    f <- function(i, j, var_res, rho, dt) { var_res * rho^(abs(j-i)*dt) } # correlation sp(pow)
 
   # faire une essence à la fois et les mettre dans des listes: une liste de listes
     #BOJ ERS FEN HEG
@@ -158,11 +158,11 @@ param_ht <- function(fic_arbres, mode_simul='DET', nb_iter=1, nb_step=1, dt=10, 
       rand_plot = bind_cols(data_plot2,random_ldhp2) %>% mutate(essence=ess)
 
       # générer une erreur résiduelle à l'échelle de l'arbre, donc autant de ligne que d'arbres  * nb_iter * time step
-      var_res = rand_ht[rand_ht$CovParm=='Residual', 1]$estimate  # variance residuel
+      varres = rand_ht[rand_ht$CovParm=='Residual', 1]$estimate  # variance residuel
       rho = rand_ht[rand_ht$CovParm=='SP(POW)', 1]$estimate  # corrélation temporelle
       # remplir la matrice de var-cov
       varcov = expand.grid(i=1:nb_step, j=1:nb_step)
-      varcov = matrix(f(varcov$i, varcov$j, var_res, rho, dt), nrow=nb_step)
+      varcov = matrix(f(varcov$i, varcov$j, varres, rho, dt), nrow=nb_step)
       n_arbre=length(liste_arbre$no_arbre)
       mu = rep(0,nb_step)
       l_mu = length(mu)

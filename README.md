@@ -63,6 +63,7 @@ Pour une description du data.frame
 
 | Date |  Version  | Issues |      Détails     |
 |:-----|:---------:|:-------|:-----------------|
+| 2024-05-13 | 1.1.4 |  | corriger erreur fct f qui génère matrice covariances |
 | 2024-04-15 | 1.1.4 |  | corriger bug quand nb_step>9 dans ht et vol |
 | 2024-03-26 | 1.1.3 |  | déplacer les packages de depends à imports dans DESCRIPTION, utiliser la fct mvrnorm de rockchalk au lieu de MASS |
 | 2024-02-22 | 1.1.2 |  | ajout de l'option na.rm=T dans le calcul de la st et densité de chaque placette |

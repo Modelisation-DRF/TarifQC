@@ -64,3 +64,4 @@ test_that("relation_h_d() avec mode stochastique retourne le bon nombre de ligne
   expect_equal(max_step_obtenu,nb_step)
 
 })
+

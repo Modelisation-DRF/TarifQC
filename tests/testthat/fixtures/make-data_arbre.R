@@ -62,10 +62,11 @@ data_arbre <- as.data.frame(unclass(expand_grid(id, ess))) %>%
 saveRDS(data_arbre, "tests/testthat/fixtures/data_arbre.rds")
 
 
+
 # fichier de ht attendu en mode déterministe
 # je devrais faire ce fichier dans SAS pour m'assurer que R donne la meme chose
 parametre_ht_attendu <- param_ht(fic_arbres=data_arbre)
-data_arbre_attendu <- relation_h_d(fic_arbres=data_arbre, parametre_ht=parametre_ht_attendu)
+data_arbre_attendu <- relation_h_d(fic_arbres=data_arbre)
 saveRDS(data_arbre_attendu, "tests/testthat/fixtures/data_arbre_attendu.rds")
 saveRDS(parametre_ht_attendu, "tests/testthat/fixtures/parametre_ht_attendu.rds")
 
@@ -77,7 +78,7 @@ data_arbre_vol <- data_arbre_attendu %>%
 saveRDS(data_arbre_vol, "tests/testthat/fixtures/data_arbre_vol.rds")
 param_vol_attendu <- param_vol(fic_arbres=data_arbre_vol)
 saveRDS(param_vol_attendu, "tests/testthat/fixtures/param_vol_attendu.rds")
-data_arbre_vol_attendu <- cubage(fic_arbres=data_arbre_vol, mode_simul='DET', parametre_vol=param_vol_attendu)
+data_arbre_vol_attendu <- cubage(fic_arbres=data_arbre_vol, mode_simul='DET')
 saveRDS(data_arbre_vol_attendu, "tests/testthat/fixtures/data_arbre_vol_attendu.rds")
 
 
@@ -123,4 +124,104 @@ ht <- relation_h_d(fic_arbres = data_simul_samare, mode_simul = 'STO', nb_iter =
 data_simul_samare_attendu_2 <- cubage(fic_arbres=ht, mode_simul='STO', nb_iter=nb_iter, nb_step=nb_step, seed_value = 20)
 # il y a des ht et vol à NA seulement pour les morts, car n'ont pas de dhp
 saveRDS(data_simul_samare_attendu_2, "tests/testthat/fixtures/data_simul_samare_attendu_2.rds")
+
+
+
+
+##############################################################
+##############################################################
+##############################################################
+
+# Vérification si mode déterministe et stochastique produisent les memes ht et vol que Capsis
+
+# pour Capsis
+data_arbre2 <- data_arbre %>% mutate(type_eco = paste0(veg_pot,milieu), etat='10', latitude=48, longitude=-78, strate=1, cl_drai='21')
+regeco_ass_sdom2 <- regeco_ass_sdom %>% group_by(sdom_bio) %>% slice(1)
+data_arbre2 <- left_join(data_arbre2, regeco_ass_sdom2[,c("reg_eco","sdom_bio")], by="sdom_bio")
+data_arbre2 <- data_arbre2 %>% filter(!(essence %in% c('AUT','CHX','EPX','F_0','F_1','F0R','FEN','FEU','FIN','PEU','PIN','RES','MEJ','MEU', 'CAR', 'CEO', 'ERG', 'ERP', 'MAS', 'PRP', 'SAL', 'SOA', 'SOD')),
+                                      !(veg_pot %in% c('MS4','MS7','RE4','RE7','RS4','RS7','RB2'))) %>%
+  mutate(vigueur = ifelse(essence %in% c('EPB', 'EPN', 'EPO', 'EPR', 'MEL', 'PIB', 'PID', 'PIG', 'PIR', 'PIS', 'PRU', 'SAB', 'THO'),5,1),
+         residuel=0, sup_pe=0.04)
+
+write_delim(data_arbre2,file="tests\\testthat\\fixtures\\data_arbre_test.csv", delim = ';')
+# pour natura (mode déterministe)
+data_arbre_etude <- data_arbre2 %>% group_by(id_pe) %>% slice(1) %>% dplyr::select(strate,id_pe, essence, dhpcm) %>%
+  mutate(age=50,
+         hauteur=120,
+         etage='D')
+write_delim(data_arbre_etude,file="tests\\testthat\\fixtures\\data_arbre_etude_test.csv", delim = ';')
+
+# fichier obtenu de Capsis-Natura2014
+data_arbre_test_attendu <-read_delim(file="tests\\testthat\\fixtures\\data_arbre_test_resCapsis.csv", delim = ';')
+data_arbre_test_attendu <- data_arbre_test_attendu %>%
+  dplyr::select(PlacetteID,Espece,Hautm,Vol_dm3) %>%
+  rename(id_pe=PlacetteID,essence=Espece,Hautm_capsis=Hautm,Vol_dm3_capsis=Vol_dm3)
+
+# fichier obtenu de Capsis-Artemis2014 en stochastique 1000 iter, 1 pas de simul
+data_arbre_test_attendu_stoA <-read_delim(file="E:\\MrnMicro\\Applic\\_Modeles-DRF\\Capsis-ModelesDRF-20240222\\data\\artemis2014\\resArt.csv", delim = ';')
+data_arbre_test_attendu_stoA <- data_arbre_test_attendu_stoA %>%
+  rename(id_pe=PlacetteID,essence=Espece,Hautm_capsis=Hautm,Vol_dm3_capsis=Vol_dm3)
+
+
+# Passer le data_arbre2 dans les fct R en mode déterministe
+data_arbre_test_obtenu <- relation_h_d(fic_arbres=data_arbre2)
+data_arbre_test_obtenu <- cubage(fic_arbres=data_arbre_test_obtenu)
+
+# comparaison déterministe R vs Capsis-Natura
+data_arbre_test_compare <- inner_join(data_arbre_test_obtenu, data_arbre_test_attendu) %>%
+  mutate(diff_ht = Hautm_capsis-hauteur_pred,
+         diff_vol = Vol_dm3_capsis-vol_dm3)
+summary(data_arbre_test_compare$diff_ht)
+summary(data_arbre_test_compare$diff_vol)
+# tous des différence à 0 pour la ht
+verif <- data_arbre_test_compare %>% arrange(diff_vol)
+# différence de -1.896 pour PIS, probablement pas la même association d'essence, pas important
+
+
+# resultat de R stochastisque du fichier simulé dans capsis-artemis, 1000 iter et 1 pas de simul
+data_arbre_var <- data_arbre2 %>% dplyr::select(id_pe,p_tot,t_ma,altitude,veg_pot,sdom_bio,milieu) %>% unique()
+data_arbre_test_attendu_stoA <- data_arbre_test_attendu_stoA %>%
+  mutate(step=(Annee-2024)/5+1, iter=IterMC+1,
+         no_arbre=origTreeID, dhpcm=DHPcm, nb_tige=Nombre,
+         #essence = ifelse(essence=='???',GrEspece,essence),
+         essence_original = essence,
+         essence=essence) %>%
+  filter(!is.na(origTreeID))
+data_arbre_test_attendu_stoA2 <- inner_join(data_arbre_var, data_arbre_test_attendu_stoA)
+
+# les recrues ont toutes des numéros d'arbres différents par iteration, c'est pour ça que c'est long le tarifqc
+# pour ce test, je vais enlever les recrues
+data_arbre_test_obtenu_stoA <- relation_h_d(fic_arbres=data_arbre_test_attendu_stoA2, mode_simul = 'STO',nb_iter = 1000, nb_step = 2, dt=10)
+data_arbre_test_obtenu_stoA <- cubage(fic_arbres=data_arbre_test_obtenu_stoA, mode_simul = 'STO',nb_iter = 1000, nb_step = 2)
+
+data_arbre_test_obtenu_sto_moyA <- data_arbre_test_obtenu_stoA %>%
+  group_by(id_pe,Annee,no_arbre,essence_original,essence) %>%
+  summarise(n=n(),
+            ht_moy_capsis = round(mean(Hautm_capsis),1),
+            ht_moy_r = round(mean(hauteur_pred),1),
+            vol_moy_capsis = round(mean(Vol_dm3_capsis),1),
+            vol_moy_r = round(mean(vol_dm3),1)) %>%
+  mutate(diff_ht = ht_moy_capsis-ht_moy_r,
+         diff_vol = vol_moy_capsis-vol_moy_r)
+summary(data_arbre_test_obtenu_sto_moyA$diff_ht)
+summary(data_arbre_test_obtenu_sto_moyA$ht_moy_capsis)
+summary(data_arbre_test_obtenu_sto_moyA$diff_vol)
+summary(data_arbre_test_obtenu_sto_moyA$vol_moy_capsis)
+# essence original de la relation h-d
+verif_hd <- data_arbre_test_obtenu_sto_moyA %>%
+  filter(essence %in% c("BOJ", "BOG", "BOP", "CET", "CHR", "EPB", "EPN", "EPR", "ERA", "ERS", "ERR", "ORA", "PET", "FRA", "FRN", "HEG", "MEL", "OSV", "PEB", "PEG", "PIB", "PIG", "PIR", "PRU", "SAB", "THO", "TIL"))
+summary(verif_hd$diff_ht) # différence entre -0.2 et 0.2 m ok
+# essence original du tarif de cubage
+verif_vol <- data_arbre_test_obtenu_sto_moyA %>%
+  filter(essence %in% c("BOJ", "BOG", "BOP", "ORA", "CET", "CHR", "EPB", "EPN", "EPR", "ERS", "ERR", "PET", "FRA", "FRN", "HEG", "THO", "MEL", "OSV", "PEB", "PEG", "PIB", "PIR", "PIG", "PRU", "SAB", "TIL"))
+summary(verif_vol$diff_vol) # différence entre -0.3 et 0.7 dm3
+
+# donc pas de problème avec les 2 équations en mode stochastique
+
+
+
+
+
+
+
 

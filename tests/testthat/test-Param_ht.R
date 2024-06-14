@@ -5,20 +5,22 @@ test_that("param_ht() avec mode déterministe retourne les bons paramètres", {
   parametre_ht <- param_ht(fic_arbres=data_arbre, mode_simul='DET')
   parametre_ht2 <- parametre_ht %>% dplyr::select(-essence, -random_ldhp2, -res_arbre)
 
-  parametre_ht_attendu <- readRDS(test_path("fixtures", "parametre_ht_attendu.rds"))
+  #parametre_ht_attendu <- readRDS(test_path("fixtures", "parametre_ht_attendu.rds"))
+  #liste_ess <- names(parametre_ht_attendu)
+  #parametre_ht_attendu2 <- bind_rows(lapply(liste_ess, function(x) parametre_ht_attendu[[x]]$effet_fixe))
+
+  parametre_ht_attendu <- ht_param_fixe # fichier interne
   liste_ess <- names(parametre_ht_attendu)
-  parametre_ht_attendu2 <- bind_rows(lapply(liste_ess, function(x) parametre_ht_attendu[[x]]$effet_fixe))
+  parametre_ht_attendu2 <- bind_rows(lapply(liste_ess, function(x) parametre_ht_attendu[[x]]))
+
   # remplacer tous les NA par des 0
-  parametre_ht_attendu3 <- parametre_ht_attendu2 %>% replace(is.na(.), 0) %>% dplyr::select(-essence, -iter)
+  parametre_ht_attendu3 <- parametre_ht_attendu2 %>% replace(is.na(.), 0) %>% dplyr::select(-essence)
 
   expect_equal(parametre_ht2, parametre_ht_attendu3)
   expect_equal(unique(parametre_ht$random_ldhp2), 0)
   expect_equal(unique(parametre_ht$res_arbre), 0)
 
 })
-
-
-
 
 test_that("param_ht() avec mode stochastique (seed=20) nb_step=1 retourne les bons paramètres des effets fixes", {
 

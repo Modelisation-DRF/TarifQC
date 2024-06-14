@@ -1,8 +1,17 @@
 
 test_that("param_vol() avec mode déterministe retourne les bons paramètres", {
   data_arbre <- readRDS(test_path("fixtures", "data_arbre_vol.rds"))
-  parametre_vol_attendu <- readRDS(test_path("fixtures", "param_vol_attendu.rds"))
-  parametre_vol_attendu <- parametre_vol_attendu[[1]]$effet_fixe %>% dplyr::select(-iter, -essence_volume)
+
+  #parametre_vol_attendu <- readRDS(test_path("fixtures", "param_vol_attendu.rds"))
+  #parametre_vol_attendu <- parametre_vol_attendu[[1]]$effet_fixe %>% dplyr::select(-iter, -essence_volume)
+  parametre_vol_attendu <- tarif_param_fixe %>%
+    separate_wider_delim(col=beta_ess, names=c("parm","essence"), delim='_', too_few = "align_start") %>%
+    filter(!is.na(essence)) %>%
+    group_by(essence) %>%
+    pivot_wider(names_from = parm, values_from = Estimate) %>%
+    mutate(b1 = tarif_param_fixe[tarif_param_fixe$beta_ess=='b1',2]) %>%
+    ungroup() %>%
+    dplyr::select(-essence)
 
   parametre_vol <- param_vol(fic_arbres=data_arbre, mode_simul='DET')
   parametre_vol <- parametre_vol$effet_fixe %>% dplyr::select(-essence, -random_plot, -resid)

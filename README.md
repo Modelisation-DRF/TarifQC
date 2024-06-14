@@ -1,16 +1,11 @@
-## TarifQC
+[![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0) [![R-CMD-check](https://github.com/Modelisation-DRF/RNatura2014/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/Modelisation-DRF/RNatura2014/actions/workflows/R-CMD-check.yaml)
+## Le package TarifQC
 
 Un package pour estimer la hauteur et le volume des arbres
 
 Auteurs: Isabelle Auger - Ministère des Ressources Naturelles et des Forêts du Québec
 
 Courriel: isabelle.auger@mrnf.gouv.qc.ca
-
-This R package is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version.
-
-This library is distributed with the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
-
-See the license LGPL-3.0 at http://www.gnu.org/copyleft/lesser.html.
 
 ## Introduction
 Le package permet d'estimer la hauteur totale en mètre et le volume marchand brut en dm3 de chacun des arbres, regroupés en placette. L'estimation peut être déterministe ou stochastique.
@@ -33,8 +28,8 @@ git clone https://github.com/Modelisation-DRF/TarifQC tarifqc
 ## Comment installer le package TarifQC dans R
 
 ```{r eval=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
-require(remotes)
-install_github("https://github.com/Modelisation-DRF/TarifQC", ref="main", auth_token = "demander_un_token")
+library(remotes)
+remotes::install_github("Modelisation-DRF/TarifQC")
 ```
 ## Exemple
 
